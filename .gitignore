@@ -1,0 +1,17 @@
+# Bundler
+/.bundle/
+/vendor/bundle/
+Gemfile.lock
+
+# librarian-puppet
+/.librarian/
+/.tmp/
+/modules/
+Puppetfile.lock
+
+# Fixture modules loaded by librarian-puppet
+/spec/fixtures/modules/
+!/spec/fixtures/modules/gluster
+
+# Puppet
+/pkg/

@@ -1,0 +1,27 @@
+{
+  "name": "praekeltfoundation-gluster",
+  "version": "0.0.1",
+  "author": "Jeremy Thurgood",
+  "summary": "Basic module to manage Gluster",
+  "license": "BSD-3-Clause",
+  "source": "https://github.com/praekeltfoundation/puppet-gluster",
+  "project_page": "https://github.com/praekeltfoundation/puppet-gluster",
+  "issues_url": "https://github.com/praekeltfoundation/puppet-gluster/issues",
+  "requirements": [
+    {
+      "name": "puppet",
+      "version_requirement": ">=3.4.0 < 4.0.0"
+    }
+  ],
+  "operatingsystem_support": [
+    {
+      "operatingsystem": "Ubuntu",
+      "operatingsystemrelease": [
+        "14.04"
+      ]
+    }
+  ],
+  "dependencies": [
+    {"name":"puppetlabs/apt"}
+  ]
+}
