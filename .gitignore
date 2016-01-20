@@ -3,6 +3,9 @@
 /vendor/bundle/
 Gemfile.lock
 
+# rbenv
+/.ruby-version
+
 # librarian-puppet
 /.librarian/
 /.tmp/
