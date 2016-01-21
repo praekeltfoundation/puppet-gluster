@@ -1,3 +1,5 @@
+require 'puppet/parameter/boolean'
+
 Puppet::Type.newtype(:gluster_volume) do
   desc <<-'ENDOFDESC'
   Defines a glusterfs peer to probe.
