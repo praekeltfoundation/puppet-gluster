@@ -49,13 +49,13 @@ describe Puppet::Type.type(:gluster_volume) do
               )}.to_not raise_error
             end
           end
-        end
 
-        it "should not support other values" do
-          expect { described_class.new(
-            :name => 'foo',
-            :ensure => 'unhappy',
-          )}.to raise_error(Puppet::Error, /Invalid value/)
+          it "should not support other values" do
+            expect { described_class.new(
+              :name => 'foo',
+              :ensure => 'unhappy',
+            )}.to raise_error(Puppet::Error, /Invalid value/)
+          end
         end
       end
     end

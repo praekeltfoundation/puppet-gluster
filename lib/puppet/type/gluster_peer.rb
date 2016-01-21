@@ -28,8 +28,8 @@ Puppet::Type.newtype(:gluster_peer) do
   newparam(:peer, :namevar => true)
 
   newparam(:ignore_peers, :array_matching => :all) do
-    desc ("Peer addresses to ignore. " +
-          "This should include anything that resolves to the current host.")
+    desc("Peer addresses to ignore. " +
+         "This should include anything that resolves to the current host.")
     defaultto []
 
     munge do |val|
