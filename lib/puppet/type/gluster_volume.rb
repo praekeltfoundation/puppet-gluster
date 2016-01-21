@@ -50,7 +50,7 @@ Puppet::Type.newtype(:gluster_volume) do
     end
   end
 
-  autorequire(:package) do
+  autorequire(:service) do
     "glusterfs-server"
   end
 
