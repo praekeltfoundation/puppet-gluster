@@ -22,6 +22,55 @@ describe Puppet::Type.type(:gluster_peer) do
           end
         end
       end
+
+      describe "namevar validation" do
+        it "should have :peer as its namevar" do
+          expect(described_class.key_attributes).to eq([:peer])
+        end
+      end
+
+      describe 'when validating attribute values' do
+
+        # :peer
+
+        # :ignore_peers
+
+        describe 'ensure' do
+          [ :present, :absent ].each do |value|
+            it "should support #{value} as a value to ensure" do
+              expect { described_class.new(
+                :peer => 'peer.example.com',
+                :ensure => value,
+              )}.to_not raise_error
+            end
+          end
+        end
+
+        it "should not support other values" do
+          expect { described_class.new(
+            :peer => 'peer.example.com',
+            :ensure => 'unhappy',
+          )}.to raise_error(Puppet::Error, /Invalid value/)
+        end
+
+        describe 'ensure' do
+          [ :present, :absent ].each do |value|
+            it "should support #{value} as a value to ensure" do
+              expect { described_class.new(
+                :peer => 'peer.example.com',
+                :ensure => value,
+              )}.to_not raise_error
+            end
+          end
+        end
+
+        it "should not support other values" do
+          expect { described_class.new(
+            :peer => 'peer.example.com',
+            :ensure => 'unhappy',
+          )}.to raise_error(Puppet::Error, /Invalid value/)
+        end
+      end
     end
   end
 end
