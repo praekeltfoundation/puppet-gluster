@@ -59,8 +59,8 @@ class Puppet::Provider::Gluster < Puppet::Provider
     vol = {
       :name => xpath_first(vol_xml, "name/text()"),
       :status => volume_status(xpath_first(vol_xml, "statusStr/text()")),
+      :bricks => xpath_match(vol_xml, "bricks/brick/name/text()"),
     }
-    vol[:bricks] = xpath_match(vol_xml, "bricks/brick/name/text()")
     vol[:peers] = brick_peers(vol[:bricks])
     if vol[:status] == :started
       vol[:ensure] = :present
@@ -76,6 +76,10 @@ class Puppet::Provider::Gluster < Puppet::Provider
   end
 
   def get_volume_info(name)
+    # If we use the single-volume form of `gluster volume info` we'll have to
+    # handle an error if the volume doesn't exist. This way we get an array of
+    # size zero or one and `.first` turns that into a `volume_info` hash or
+    # `nil`.
     vols = self.class.all_volumes.select { |v| v[:name] == name }
     vols.first
   end
