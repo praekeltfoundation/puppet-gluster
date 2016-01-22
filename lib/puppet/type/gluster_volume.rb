@@ -44,6 +44,12 @@ Puppet::Type.newtype(:gluster_volume) do
 
   newparam(:replica) do
     desc "Number of replicas for a replicated volume."
+
+    validate do |val|
+      if !val.is_a?(Integer) or val < 2
+        raise ArgumentError, "if present, replica must be an integer >= 2"
+      end
+    end
   end
 
   newparam(:bricks, :array_matching => :all) do

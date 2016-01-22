@@ -69,17 +69,15 @@ describe Puppet::Type.type(:gluster_volume) do
           end
 
           it "should not accept an integer < 2" do
-            pending "Implement this validation"
             expect {
               described_class.new(:name => 'data1', :replica => 1)
-            }.to raise_error(Puppet::Error, /Invalid value/)
+            }.to raise_error(Puppet::Error, /must be an integer >= 2/)
           end
 
           it "should not accept an arbitrary string" do
-            pending "Implement this validation"
             expect {
               described_class.new(:name => 'data1', :replica => "seventeen")
-            }.to raise_error(Puppet::Error, /Invalid value/)
+            }.to raise_error(Puppet::Error, /must be an integer >= 2/)
           end
         end
 
