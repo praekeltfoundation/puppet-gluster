@@ -64,6 +64,60 @@ module GlusterXML
     end
   end
 
+  class VolumeInfo < CLIBase
+    def initialize(volumes)
+      super('volInfo')
+      @volumes = @cmd.add_element('volumes')
+      add_elem_text(@volumes, 'count', volumes.size.to_s)
+      volumes.each { |volume| add_volume(volume) }
+    end
+
+    def add_volume(volume)
+      # :name and :bricks are mandatory.
+      # FIXME: Build some of these values (status, types, etc.) more sensibly.
+      # Fill in missing parameters.
+      volume[:id] ||= GlusterXML::uuidify(volume[:name])
+      volume[:status] ||= 1
+      volume[:statusStr] ||= 'Started'
+      volume[:stripe] ||= 1
+      volume[:replica] ||= 1
+      volume[:disperse] ||= 1
+      volume[:redundancy] ||= 1
+      volume[:type] ||= 2
+      volume[:typeStr] ||= 'Replicate'
+
+      # Build the XML for the volume.
+      elem = @volumes.add_element('volume')
+      add_elem_text(elem, 'name', volume[:name])
+      add_elem_text(elem, 'status', volume[:status].to_s)
+      add_elem_text(elem, 'statusStr', volume[:statusStr])
+      add_elem_text(elem, 'brickCount', volume[:bricks].size.to_s)
+      # FIXME: I don't know what the distCount actually is.
+      add_elem_text(elem, 'distCount', volume[:bricks].size.to_s)
+      add_elem_text(elem, 'stripeCount', volume[:stripe].size.to_s)
+      add_elem_text(elem, 'replicaCount', volume[:replica].to_s)
+      add_elem_text(elem, 'disperseCount', volume[:disperse].to_s)
+      add_elem_text(elem, 'redundancyCount', volume[:redundancy].to_s)
+      add_elem_text(elem, 'type', volume[:type].to_s)
+      add_elem_text(elem, 'typeStr', volume[:typeStr])
+      add_elem_text(elem, 'transport', volume[:transport].to_s)
+      # TODO: Support xlators?
+      elem.add_element('xlators')
+      bricks = elem.add_element('bricks')
+      volume[:bricks].each do |brick|
+        brick[:uuid] ||= GlusterXML::uuidify(brick[:name])
+        brick[:hostUuid] ||= GlusterXML::uuidify(brick[:name].split(':')[0])
+        belem = bricks.add_element('brick', {'uuid' => brick[:uuid]})
+        belem.add_text(brick[:name])
+        add_elem_text(belem, 'name', brick[:name])
+        add_elem_text(belem, 'hostUuid', brick[:hostUuid])
+      end
+      # TODO: Support options?
+      add_elem_text(elem, 'optCount', '1')
+      elem.add_element('options')
+    end
+  end
+
   def self.uuidify(str)
     # This fakes a UUID by reformatting the MD5 hash of the input.
     Digest::MD5.hexdigest(str).unpack('a8a4a4a4a12').join('-')
@@ -72,4 +126,8 @@ end
 
 def peer_status_xml(peers)
   GlusterXML::PeerStatus.new(peers).to_s
+end
+
+def volume_info_xml(volumes)
+  GlusterXML::VolumeInfo.new(volumes).to_s
 end
