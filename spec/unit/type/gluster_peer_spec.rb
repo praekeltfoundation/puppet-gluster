@@ -36,19 +36,19 @@ describe Puppet::Type.type(:gluster_peer) do
 
       describe 'when validating attribute values' do
         describe 'peer' do
-          it "should support a hostname as a value" do
+          it "should accept a hostname" do
             expect(
               described_class.new(:peer => 'gfs1')
             ).to satisfy { |v| v[:peer] == 'gfs1' }
           end
 
-          it "should support a fully qualified domain as a value" do
+          it "should accept a fully qualified domain" do
             expect(
               described_class.new(:peer => 'gfs2.example.com')
             ).to satisfy { |v| v[:peer] == 'gfs2.example.com' }
           end
 
-          it "should support an IP as a value" do
+          it "should accept an IP" do
             expect(
               described_class.new(:peer => '1.2.3.4')
             ).to satisfy { |v| v[:peer] == '1.2.3.4' }
@@ -66,21 +66,21 @@ describe Puppet::Type.type(:gluster_peer) do
             ).to satisfy { |v| v[:ignore_peers] == default }
           end
 
-          it "should accpet a single string" do
+          it "should accept a single string" do
             default = get_facts(:fqdn, :hostname, :ipaddress, :ipaddress_lo)
             expect(
               described_class.new(:peer => 'foo', :ignore_peers => 'foo')
             ).to satisfy { |v| v[:ignore_peers] == ['foo'] + default }
           end
 
-          it "should accpet an array containing a single string" do
+          it "should accept an array containing a single string" do
             default = get_facts(:fqdn, :hostname, :ipaddress, :ipaddress_lo)
             expect(
               described_class.new(:peer => 'foo', :ignore_peers => ['foo'])
             ).to satisfy { |v| v[:ignore_peers] == ['foo'] + default }
           end
 
-          it "should accpet an array containing many strings" do
+          it "should accept an array containing many strings" do
             default = get_facts(:fqdn, :hostname, :ipaddress, :ipaddress_lo)
             expect(
               described_class.new(:peer => 'foo', :ignore_peers => ['a', 'b'])
@@ -90,7 +90,7 @@ describe Puppet::Type.type(:gluster_peer) do
 
         describe 'ensure' do
           [ :present, :absent ].each do |value|
-            it "should support #{value} as a value" do
+            it "should accept #{value}" do
               expect { described_class.new(
                 :peer => 'peer.example.com',
                 :ensure => value,
@@ -98,7 +98,7 @@ describe Puppet::Type.type(:gluster_peer) do
             end
           end
 
-          it "should not support other values" do
+          it "should not accept other values" do
             expect { described_class.new(
               :peer => 'peer.example.com',
               :ensure => 'unhappy',

@@ -31,18 +31,88 @@ describe Puppet::Type.type(:gluster_volume) do
       end
 
       describe 'when validating attribute values' do
+        describe 'name' do
+          it "should accept a string" do
+            expect(
+              described_class.new(:name => 'data1')
+            ).to satisfy { |v| v[:name] == 'data1' }
+          end
+        end
 
-        # :name
+        describe 'force' do
+          [true, false].each do |value|
+            it "should accept #{value}" do
+              expect(
+                described_class.new(:name => 'data1', :force => value)
+              ).to satisfy { |v| v[:force] == value and !!v.force? == value }
+            end
+          end
 
-        # :force
+          it "should not accept other values" do
+            expect {
+              described_class.new(:name => 'data1', :force => 'Yoda')
+            }.to raise_error(Puppet::Error, /Invalid value/)
+          end
+        end
 
-        # :replica
+        describe 'replica' do
+          it "should accept an empty value" do
+            expect(
+              described_class.new(:name => 'data1')
+            ).to satisfy { |v| v[:replica].nil? }
+          end
 
-        # :bricks
+          it "should accept an integer >= 2" do
+            expect(
+              described_class.new(:name => 'data1', :replica => 2)
+            ).to satisfy { |v| v[:replica] == 2 }
+          end
+
+          it "should not accept an integer < 2" do
+            pending "Implement this validation"
+            expect {
+              described_class.new(:name => 'data1', :replica => 1)
+            }.to raise_error(Puppet::Error, /Invalid value/)
+          end
+
+          it "should not accept an arbitrary string" do
+            pending "Implement this validation"
+            expect {
+              described_class.new(:name => 'data1', :replica => "seventeen")
+            }.to raise_error(Puppet::Error, /Invalid value/)
+          end
+        end
+
+        describe 'bricks' do
+          it "should default to an empty array" do
+            expect(
+              described_class.new(:name => 'data1')
+            ).to satisfy { |v| v[:bricks] == [] }
+          end
+
+          it "should accept a single string" do
+            expect(
+              described_class.new(:name => 'data1', :bricks => 'p1:b1')
+            ).to satisfy { |v| v[:bricks] == ['p1:b1'] }
+          end
+
+          it "should accept an array containing a single string" do
+            expect(
+              described_class.new(:name => 'data1', :bricks => ['p1:b1'])
+            ).to satisfy { |v| v[:bricks] == ['p1:b1'] }
+          end
+
+          it "should accept an array containing many strings" do
+            expect(
+              described_class.new(
+              :name => 'data1', :bricks => ['p1:b1', 'p2:b1'])
+            ).to satisfy { |v| v[:bricks] == ['p1:b1', 'p2:b1'] }
+          end
+        end
 
         describe 'ensure' do
           [ :present, :absent, :stopped ].each do |value|
-            it "should support #{value} as a value to ensure" do
+            it "should accept #{value}" do
               expect {described_class.new(
                 :name => 'foo',
                 :ensure => value,
@@ -50,7 +120,7 @@ describe Puppet::Type.type(:gluster_volume) do
             end
           end
 
-          it "should not support other values" do
+          it "should not accept other values" do
             expect { described_class.new(
               :name => 'foo',
               :ensure => 'unhappy',

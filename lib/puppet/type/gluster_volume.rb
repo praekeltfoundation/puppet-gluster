@@ -42,10 +42,13 @@ Puppet::Type.newtype(:gluster_volume) do
     defaultto :false
   end
 
-  newparam(:replica)
+  newparam(:replica) do
+    desc "Number of replicas for a replicated volume."
+  end
 
   newparam(:bricks, :array_matching => :all) do
     desc "List of bricks backing the volume."
+    defaultto []
 
     munge do |val|
       Array(val)
