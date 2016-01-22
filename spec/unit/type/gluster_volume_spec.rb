@@ -6,7 +6,7 @@ describe Puppet::Type.type(:gluster_volume) do
       before :each do
         Facter.clear
         facts.each do |k, v|
-          Facter.stubs(:fact).with(k).returns Facter.add(k) { setcode { v} }
+          Facter.stubs(:fact).with(k).returns Facter.add(k) { setcode { v } }
         end
       end
 
