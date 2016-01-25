@@ -89,7 +89,7 @@ class FakeVolume
       bricks = volume_hash[:bricks]
     end
     @name = name
-    @bricks = bricks.map do |brick| populate_brick(brick)
+    @bricks = bricks.map do |brick|
       brick[:uuid] ||= uuidify(brick[:name])
       brick[:hostUuid] ||= uuidify(brick[:name].split(':')[0])
       brick
