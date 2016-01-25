@@ -10,6 +10,8 @@ describe Puppet::Type.type(:gluster_volume).provider(:gluster_volume) do
         facts.each do |k, v|
           Facter.stubs(:fact).with(k).returns Facter.add(k) { setcode { v } }
         end
+        @fake_gluster = FakeGluster.new
+        allow(described_class).to receive(:gluster, &@fake_gluster)
       end
 
       describe 'class methods' do
@@ -21,13 +23,6 @@ describe Puppet::Type.type(:gluster_volume).provider(:gluster_volume) do
       end
 
       context 'without volumes' do
-        before :each do
-          fake_gluster = FakeGluster.new([], [])
-          described_class.expects(:gluster).with(
-            'volume', 'info', 'all', '--xml',
-          ).returns fake_gluster.volume_info
-        end
-
         it 'should return no resources' do
           expect(props(described_class.instances)).to eq([])
         end
@@ -35,17 +30,14 @@ describe Puppet::Type.type(:gluster_volume).provider(:gluster_volume) do
 
       context 'with one volume' do
         before :each do
-          fake_gluster = FakeGluster.new([], [{
-                :name => 'vol1',
-                :replica => 2,
-                :bricks => [
-                  { :name => 'gfs1.local:/b1/vol1' },
-                  { :name => 'gfs2.local:/b1/vol1' },
-                ]
-              }])
-          described_class.expects(:gluster).with(
-            'volume', 'info', 'all', '--xml',
-          ).returns fake_gluster.volume_info
+          @fake_gluster.add_volumes({
+              :name => 'vol1',
+              :replica => 2,
+              :bricks => [
+                { :name => 'gfs1.local:/b1/vol1' },
+                { :name => 'gfs2.local:/b1/vol1' },
+              ]
+            })
         end
 
         it 'should return one resource' do
@@ -58,23 +50,20 @@ describe Puppet::Type.type(:gluster_volume).provider(:gluster_volume) do
 
       context 'with two volumes' do
         before :each do
-          fake_gluster = FakeGluster.new([], [{
-                :name => 'vol1',
-                :replica => 2,
-                :bricks => [
-                  { :name => 'gfs1.local:/b1/vol1' },
-                  { :name => 'gfs2.local:/b1/vol1' },
-                ]
-              }, {
-                :name => 'vol2',
-                :bricks => [
-                  { :name => 'gfs1.local:/b1/vol2' },
-                  { :name => 'gfs2.local:/b1/vol2' },
-                ]
-              }])
-          described_class.expects(:gluster).with(
-            'volume', 'info', 'all', '--xml',
-          ).returns fake_gluster.volume_info
+          @fake_gluster.add_volumes({
+              :name => 'vol1',
+              :replica => 2,
+              :bricks => [
+                { :name => 'gfs1.local:/b1/vol1' },
+                { :name => 'gfs2.local:/b1/vol1' },
+              ]
+            }, {
+              :name => 'vol2',
+              :bricks => [
+                { :name => 'gfs1.local:/b1/vol2' },
+                { :name => 'gfs2.local:/b1/vol2' },
+              ]
+            })
         end
 
         it 'should return two resources' do

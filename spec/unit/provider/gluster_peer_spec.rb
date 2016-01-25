@@ -10,6 +10,8 @@ describe Puppet::Type.type(:gluster_peer).provider(:gluster_peer) do
         facts.each do |k, v|
           Facter.stubs(:fact).with(k).returns Facter.add(k) { setcode { v } }
         end
+        @fake_gluster = FakeGluster.new
+        allow(described_class).to receive(:gluster, &@fake_gluster)
       end
 
       describe 'class methods' do
@@ -21,13 +23,6 @@ describe Puppet::Type.type(:gluster_peer).provider(:gluster_peer) do
       end
 
       context 'without peers' do
-        before :each do
-          fake_gluster = FakeGluster.new([], [])
-          described_class.expects(:gluster).with(
-            'peer', 'status', '--xml',
-          ).returns fake_gluster.peer_status
-        end
-
         it 'should return no resources' do
           expect(props(described_class.instances)).to eq([])
         end
@@ -35,12 +30,8 @@ describe Puppet::Type.type(:gluster_peer).provider(:gluster_peer) do
 
       context 'with one peer' do
         before :each do
-          fake_gluster = FakeGluster.new(['gfs1.local'], [])
-          described_class.expects(:gluster).with(
-            'peer', 'status', '--xml',
-          ).returns fake_gluster.peer_status
+          @fake_gluster.add_peers('gfs1.local')
         end
-
         it 'should return one resource' do
           expect(props(described_class.instances)).to eq([{
                 :name => 'gfs1.local',
@@ -52,12 +43,8 @@ describe Puppet::Type.type(:gluster_peer).provider(:gluster_peer) do
 
       context 'with two peers' do
         before :each do
-          fake_gluster = FakeGluster.new(['gfs1.local', 'gfs2.local'], [])
-          described_class.expects(:gluster).with(
-            'peer', 'status', '--xml',
-          ).returns fake_gluster.peer_status
+          @fake_gluster.add_peers(['gfs1.local', 'gfs2.local'])
         end
-
         it 'should return two resources' do
           expect(props(described_class.instances)).to eq([{
                 :name => 'gfs1.local',

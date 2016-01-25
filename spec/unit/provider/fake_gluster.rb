@@ -143,19 +143,45 @@ end
 class FakeGluster
   include GlusterXML
 
-  def initialize(peers=[], volumes=[])
+  def initialize
     @peers = []
     @volumes = []
-    peers.each { |peer| add_peer(peer) }
-    volumes.each { |volume| add_volume(volume) }
   end
+
+  # Manipulate state.
 
   def add_peer(hostname, peer_hash={})
     @peers << FakePeer.new(hostname, peer_hash)
   end
 
+  def add_peers(*peers)
+    peers = peers[0] if peers.size == 1 and peers[0].is_a? Array
+    peers.each { |peer| add_peer(peer) }
+  end
+
   def add_volume(name, bricks=nil, volume_hash={})
     @volumes << FakeVolume.new(name, bricks, volume_hash)
+  end
+
+  def add_volumes(*volumes)
+    volumes = volumes[0] if volumes.size == 1 and volumes[0].is_a? Array
+    volumes.each { |volume| add_volume(volume) }
+  end
+
+  # Pretend to be the cli.
+
+  def gluster(*args)
+    raise ArgumentError, "missing '--xml'" unless args.include? '--xml'
+    args.delete('--xml')
+    puts "args: #{args.inspect}"
+    case args
+    when ['peer', 'status']
+      peer_status
+    when ['volume', 'info', 'all']
+      volume_info
+    else
+      raise ArgumentError, "I don't know how to handle #{args.inspect}"
+    end
   end
 
   def peer_status
@@ -169,5 +195,11 @@ class FakeGluster
     add_elem_text(elem, 'count', @volumes.size.to_s)
     @volumes.each { |volume| volume.info_xml(elem) }
     format_doc(elem)
+  end
+
+  # Utility stuff to make life a little easier.
+
+  def to_proc
+    method(:gluster).to_proc
   end
 end
