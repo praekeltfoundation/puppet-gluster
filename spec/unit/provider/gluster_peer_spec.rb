@@ -26,6 +26,24 @@ describe Puppet::Type.type(:gluster_peer).provider(:gluster_peer) do
         it 'should return no resources' do
           expect(props(described_class.instances)).to eq([])
         end
+
+        describe 'a new peer' do
+          before :each do
+            res = described_class.resource_type.new(:name => 'new1.local')
+            @new_peer = described_class.new(res)
+          end
+
+          it 'should not exist' do
+            expect(@new_peer.exists?).to eq(false)
+          end
+
+          it 'should be created' do
+            expect(@fake_gluster.peer_hosts).to eq([])
+            @new_peer.create
+            expect(@fake_gluster.peer_hosts).to eq(['new1.local'])
+            expect(@new_peer.exists?).to eq(true)
+          end
+        end
       end
 
       context 'with one peer' do
@@ -38,6 +56,43 @@ describe Puppet::Type.type(:gluster_peer).provider(:gluster_peer) do
                 :peer => 'gfs1.local',
                 :ensure => :present,
               }])
+        end
+
+        describe 'a new peer' do
+          before :each do
+            res = described_class.resource_type.new(:name => 'new2.local')
+            @new_peer = described_class.new(res)
+          end
+
+          it 'should not exist' do
+            expect(@new_peer.exists?).to eq(false)
+          end
+
+          it 'should be created' do
+            expect(@fake_gluster.peer_hosts).to eq(['gfs1.local'])
+            @new_peer.create
+            expect(@fake_gluster.peer_hosts).to eq(['gfs1.local', 'new2.local'])
+            expect(@new_peer.exists?).to eq(true)
+          end
+        end
+
+        describe 'an existing peer' do
+          before :each do
+            (@peer,) = described_class.instances
+            @peer.resource = described_class.resource_type.new(
+              :name => 'gfs1.local', :ensure => :present)
+          end
+
+          it 'should exist' do
+            expect(@peer.exists?).to eq(true)
+          end
+
+          it 'should be destroyed' do
+            expect(@fake_gluster.peer_hosts).to eq(['gfs1.local'])
+            @peer.destroy
+            expect(@fake_gluster.peer_hosts).to eq([])
+            expect(@peer.exists?).to eq(false)
+          end
         end
       end
 

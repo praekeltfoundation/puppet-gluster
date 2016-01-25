@@ -32,12 +32,13 @@ Puppet::Type.type(:gluster_peer).provide(
 
   def create
     begin
-      gluster("peer", "probe", resource[:peer])
+      # FIXME: I think this behaviour is different with `--xml`.
+      gluster('peer', 'probe', resource[:peer], '--xml')
     rescue Puppet::ExecutionFailure => e
       # Prior to 3.7, gluster returned a less helpful error when it couldn't
       # reach the peer it was probing.
-      ["Probe returned with Transport endpoint is not connected",
-       "Probe returned with unknown errno 107"].each do |msg|
+      ['Probe returned with Transport endpoint is not connected',
+       'Probe returned with unknown errno 107'].each do |msg|
         if e.message.chomp.end_with? "peer probe: failed: #{msg}"
           warning("Peer '#{resource[:peer]}' is unreachable," +
                   " not actually creating.")
@@ -51,7 +52,7 @@ Puppet::Type.type(:gluster_peer).provide(
   end
 
   def destroy
-    gluster("peer", "detach", resource[:peer])
+    gluster('peer', 'detach', resource[:peer], '--xml')
     @property_hash[:ensure] = :absent
   end
 

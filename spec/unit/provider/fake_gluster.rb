@@ -50,6 +50,8 @@ end
 class FakePeer
   include GlusterXML
 
+  attr_accessor :hostname
+
   def initialize(hostname, peer_hash={})
     if hostname.is_a? Hash
       peer_hash = hostname
@@ -148,7 +150,7 @@ class FakeGluster
     @volumes = []
   end
 
-  # Manipulate state.
+  # Manipulate and inspect state.
 
   def add_peer(hostname, peer_hash={})
     @peers << FakePeer.new(hostname, peer_hash)
@@ -157,6 +159,14 @@ class FakeGluster
   def add_peers(*peers)
     peers = peers[0] if peers.size == 1 and peers[0].is_a? Array
     peers.each { |peer| add_peer(peer) }
+  end
+
+  def remove_peer(hostname)
+    @peers.delete_if { |peer| peer.hostname == hostname }
+  end
+
+  def peer_hosts
+    @peers.map { |peer| peer.hostname }
   end
 
   def add_volume(name, bricks=nil, volume_hash={})
@@ -177,6 +187,10 @@ class FakeGluster
     case args
     when ['peer', 'status']
       peer_status
+    when ->(a){ a.size == 3 and a.take(2) == ['peer', 'probe'] }
+      peer_probe(args[2])
+    when ->(a){ a.size == 3 and a.take(2) == ['peer', 'detach'] }
+      peer_detach(args[2])
     when ['volume', 'info', 'all']
       volume_info
     else
@@ -188,6 +202,16 @@ class FakeGluster
     elem = make_cli_elem('peerStatus')
     @peers.each { |peer| peer.status_xml(elem) }
     format_doc(elem)
+  end
+
+  def peer_probe(peer)
+    # TODO: More comprehensive implementation, including failures.
+    add_peer(peer)
+  end
+
+  def peer_detach(peer)
+    # TODO: More comprehensive implementation, including failures.
+    remove_peer(peer)
   end
 
   def volume_info
