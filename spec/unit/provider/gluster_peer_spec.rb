@@ -1,5 +1,6 @@
 require 'spec_helper'
 require 'unit/provider/helpers'
+require 'unit/provider/fake_gluster'
 
 describe Puppet::Type.type(:gluster_peer).provider(:gluster_peer) do
   on_supported_os.each do |os, facts|
@@ -21,9 +22,10 @@ describe Puppet::Type.type(:gluster_peer).provider(:gluster_peer) do
 
       context 'without peers' do
         before :each do
+          fake_gluster = FakeGluster.new([], [])
           described_class.expects(:gluster).with(
             'peer', 'status', '--xml',
-          ).returns peer_status_xml([])
+          ).returns fake_gluster.peer_status
         end
 
         it 'should return no resources' do
@@ -33,9 +35,10 @@ describe Puppet::Type.type(:gluster_peer).provider(:gluster_peer) do
 
       context 'with one peer' do
         before :each do
+          fake_gluster = FakeGluster.new(['gfs1.local'], [])
           described_class.expects(:gluster).with(
             'peer', 'status', '--xml',
-          ).returns peer_status_xml(['gfs1.local'])
+          ).returns fake_gluster.peer_status
         end
 
         it 'should return one resource' do
@@ -49,9 +52,10 @@ describe Puppet::Type.type(:gluster_peer).provider(:gluster_peer) do
 
       context 'with two peers' do
         before :each do
+          fake_gluster = FakeGluster.new(['gfs1.local', 'gfs2.local'], [])
           described_class.expects(:gluster).with(
             'peer', 'status', '--xml',
-          ).returns peer_status_xml(['gfs1.local', 'gfs2.local'])
+          ).returns fake_gluster.peer_status
         end
 
         it 'should return two resources' do

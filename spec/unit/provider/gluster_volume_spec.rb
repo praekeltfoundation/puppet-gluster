@@ -1,4 +1,6 @@
 require 'spec_helper'
+require 'unit/provider/helpers'
+require 'unit/provider/fake_gluster'
 
 describe Puppet::Type.type(:gluster_volume).provider(:gluster_volume) do
   on_supported_os.each do |os, facts|
@@ -20,9 +22,10 @@ describe Puppet::Type.type(:gluster_volume).provider(:gluster_volume) do
 
       context 'without volumes' do
         before :each do
+          fake_gluster = FakeGluster.new([], [])
           described_class.expects(:gluster).with(
             'volume', 'info', 'all', '--xml',
-          ).returns volume_info_xml([])
+          ).returns fake_gluster.volume_info
         end
 
         it 'should return no resources' do
@@ -32,9 +35,7 @@ describe Puppet::Type.type(:gluster_volume).provider(:gluster_volume) do
 
       context 'with one volume' do
         before :each do
-          described_class.expects(:gluster).with(
-            'volume', 'info', 'all', '--xml',
-          ).returns volume_info_xml([{
+          fake_gluster = FakeGluster.new([], [{
                 :name => 'vol1',
                 :replica => 2,
                 :bricks => [
@@ -42,6 +43,9 @@ describe Puppet::Type.type(:gluster_volume).provider(:gluster_volume) do
                   { :name => 'gfs2.local:/b1/vol1' },
                 ]
               }])
+          described_class.expects(:gluster).with(
+            'volume', 'info', 'all', '--xml',
+          ).returns fake_gluster.volume_info
         end
 
         it 'should return one resource' do
@@ -54,9 +58,7 @@ describe Puppet::Type.type(:gluster_volume).provider(:gluster_volume) do
 
       context 'with two volumes' do
         before :each do
-          described_class.expects(:gluster).with(
-            'volume', 'info', 'all', '--xml',
-          ).returns volume_info_xml([{
+          fake_gluster = FakeGluster.new([], [{
                 :name => 'vol1',
                 :replica => 2,
                 :bricks => [
@@ -70,6 +72,9 @@ describe Puppet::Type.type(:gluster_volume).provider(:gluster_volume) do
                   { :name => 'gfs2.local:/b1/vol2' },
                 ]
               }])
+          described_class.expects(:gluster).with(
+            'volume', 'info', 'all', '--xml',
+          ).returns fake_gluster.volume_info
         end
 
         it 'should return two resources' do
