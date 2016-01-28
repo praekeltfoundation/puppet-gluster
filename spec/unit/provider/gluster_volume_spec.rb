@@ -1,6 +1,5 @@
 require 'spec_helper'
-require 'unit/provider/helpers'
-require 'unit/provider/fake_gluster'
+require 'unit/helpers'
 
 describe Puppet::Type.type(:gluster_volume).provider(:gluster_volume) do
   on_supported_os.each do |os, facts|

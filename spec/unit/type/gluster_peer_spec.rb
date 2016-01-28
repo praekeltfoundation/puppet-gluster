@@ -105,6 +105,57 @@ describe Puppet::Type.type(:gluster_peer) do
             )}.to raise_error(Puppet::Error, /Invalid value/)
           end
         end
+
+        describe 'ignoring peers' do
+          it 'should not ignore arbitrary peers' do
+            rtype = described_class.new(
+              :peer => 'peer.example.com',
+              :ensure => :present)
+            expect(rtype.parameter(:ensure).insync? :absent).to eq(false)
+            expect(rtype.parameter(:ensure).insync? :present).to eq(true)
+          end
+
+          it 'should ignore localhost' do
+            # We ignore peers by always pretending they're in sync.
+            rtype = described_class.new(
+              :peer => '127.0.0.1',
+              :ensure => :present)
+            expect(rtype.parameter(:ensure).insync? :absent).to eq(true)
+            expect(rtype.parameter(:ensure).insync? :present).to eq(true)
+          end
+
+          it 'should ignore ignored peers' do
+            # We ignore peers by always pretending they're in sync.
+            rtype = described_class.new(
+              :peer => 'peer.example.com',
+              :ensure => :present,
+              :ignore_peers => ['peer.example.com'])
+            expect(rtype.parameter(:ensure).insync? :absent).to eq(true)
+            expect(rtype.parameter(:ensure).insync? :present).to eq(true)
+          end
+        end
+
+        describe 'autorequire' do
+          before(:each) do
+            @rtype = described_class.new(
+              :peer => 'peer.example.com',
+              :ensure => :present)
+            @cat = Puppet::Resource::Catalog.new
+          end
+
+          it 'should require Service[glusterfs-server] if declared' do
+            @cat.create_resource(:service, :title => 'glusterfs-server')
+            expect(
+              @rtype.autorequire(@cat).map { |r| r.source.to_s }
+            ).to eq(["Service[glusterfs-server]"])
+          end
+
+          it 'should not require Service[glusterfs-server] unless declared' do
+            expect(
+              @rtype.autorequire(@cat).map { |r| r.source.to_s }
+            ).to eq([])
+          end
+        end
       end
     end
   end
