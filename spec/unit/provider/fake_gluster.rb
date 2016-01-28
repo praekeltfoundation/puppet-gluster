@@ -183,7 +183,6 @@ class FakeGluster
   def gluster(*args)
     raise ArgumentError, "missing '--xml'" unless args.include? '--xml'
     args.delete('--xml')
-    puts "args: #{args.inspect}"
     case args
     when ['peer', 'status']
       peer_status
