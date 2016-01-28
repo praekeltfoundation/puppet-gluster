@@ -6,7 +6,7 @@ describe Puppet::Type.type(:gluster_volume) do
       before :each do
         Facter.clear
         facts.each do |k, v|
-          Facter.stubs(:fact).with(k).returns Facter.add(k) { setcode { v} }
+          Facter.stubs(:fact).with(k).returns Facter.add(k) { setcode { v } }
         end
       end
 
@@ -66,6 +66,12 @@ describe Puppet::Type.type(:gluster_volume) do
             expect(
               described_class.new(:name => 'data1', :replica => 2)
             ).to satisfy { |v| v[:replica] == 2 }
+            expect(
+              described_class.new(:name => 'data1', :replica => '2')
+            ).to satisfy { |v| v[:replica] == 2 }
+            expect(
+              described_class.new(:name => 'data1', :replica => '17')
+            ).to satisfy { |v| v[:replica] == 17 }
           end
 
           it "should not accept an integer < 2" do
@@ -76,7 +82,7 @@ describe Puppet::Type.type(:gluster_volume) do
 
           it "should not accept an arbitrary string" do
             expect {
-              described_class.new(:name => 'data1', :replica => "seventeen")
+              described_class.new(:name => 'data1', :replica => 'seventeen')
             }.to raise_error(Puppet::Error, /must be an integer >= 2/)
           end
         end
