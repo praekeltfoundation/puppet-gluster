@@ -1,7 +1,9 @@
 require 'spec_helper'
 require 'unit/helpers'
 
-describe Puppet::Type.type(:gluster_volume).provider(:gluster_volume) do
+volume_type = Puppet::Type.type(:gluster_volume)
+
+describe volume_type.provider(:gluster_volume), :unit => true do
   on_supported_os.each do |os, facts|
     context "on #{os}" do
       before :each do

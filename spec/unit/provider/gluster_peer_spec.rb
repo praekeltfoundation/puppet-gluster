@@ -1,7 +1,9 @@
 require 'spec_helper'
 require 'unit/helpers'
 
-describe Puppet::Type.type(:gluster_peer).provider(:gluster_peer) do
+peer_type = Puppet::Type.type(:gluster_peer)
+
+describe peer_type.provider(:gluster_peer), :unit => true do
   on_supported_os.each do |os, facts|
     context "on #{os}" do
       before :each do

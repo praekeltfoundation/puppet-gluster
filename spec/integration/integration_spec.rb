@@ -1,7 +1,7 @@
 require 'spec_helper'
 require 'integration/helpers'
 
-describe 'integration' do
+describe 'integration', :integration => true do
   on_supported_os.each do |os, facts|
     context "on #{os}" do
       before :each do
