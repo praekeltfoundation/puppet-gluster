@@ -4,10 +4,8 @@ describe Puppet::Type.type(:gluster_volume) do
   on_supported_os.each do |os, facts|
     context "on #{os}" do
       before :each do
-        Facter.clear
-        facts.each do |k, v|
-          Facter.stubs(:fact).with(k).returns Facter.add(k) { setcode { v } }
-        end
+        allow(Facter).to receive(:collection, &make_fake_collection(facts))
+        Facter.reset
       end
 
       describe 'when validating attributes' do
@@ -133,7 +131,7 @@ describe Puppet::Type.type(:gluster_volume) do
         end
 
         describe 'autorequire' do
-          before(:each) do
+          before :each do
             def vol(*bricks)
               described_class.new(
                 :name => 'foo',

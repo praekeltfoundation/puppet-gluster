@@ -5,10 +5,8 @@ describe Puppet::Type.type(:gluster_volume).provider(:gluster_volume) do
   on_supported_os.each do |os, facts|
     context "on #{os}" do
       before :each do
-        Facter.clear
-        facts.each do |k, v|
-          Facter.stubs(:fact).with(k).returns Facter.add(k) { setcode { v } }
-        end
+        allow(Facter).to receive(:collection, &make_fake_collection(facts))
+        Facter.reset
         @fake_gluster = FakeGluster.new
         allow(described_class).to receive(:gluster, &@fake_gluster)
       end

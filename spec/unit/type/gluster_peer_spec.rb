@@ -4,10 +4,8 @@ describe Puppet::Type.type(:gluster_peer) do
   on_supported_os.each do |os, facts|
     context "on #{os}" do
       before :each do
-        Facter.clear
-        facts.each do |k, v|
-          Facter.stubs(:fact).with(k).returns Facter.add(k) { setcode { v } }
-        end
+        allow(Facter).to receive(:collection, &make_fake_collection(facts))
+        Facter.reset
       end
 
       # This uses `define_method` so that `facts` is in scope.
@@ -136,7 +134,7 @@ describe Puppet::Type.type(:gluster_peer) do
         end
 
         describe 'autorequire' do
-          before(:each) do
+          before :each do
             @rtype = described_class.new(
               :peer => 'peer.example.com',
               :ensure => :present)

@@ -8,4 +8,5 @@ def props(providers)
 end
 
 # To avoid extra requires all over the place.
+require 'unit/fake_facts'
 require 'unit/fake_gluster'
