@@ -30,29 +30,30 @@ Puppet::Type.type(:gluster_peer).provide(
     @property_hash[:ensure] == :present
   end
 
-  def create
-    begin
-      # FIXME: I think this behaviour is different with `--xml`.
-      gluster('peer', 'probe', resource[:peer], '--xml')
-    rescue Puppet::ExecutionFailure => e
-      # Prior to 3.7, gluster returned a less helpful error when it couldn't
-      # reach the peer it was probing.
-      ['Probe returned with Transport endpoint is not connected',
-       'Probe returned with unknown errno 107'].each do |msg|
-        if e.message.chomp.end_with? "peer probe: failed: #{msg}"
-          warning("Peer '#{resource[:peer]}' is unreachable," +
-                  " not actually creating.")
-          return
-        end
+  def handle_peer_probe(output)
+    doc = REXML::Document.new(output)
+    if xpath_first(doc, '/cliOutput/opRet/text()') == '0'
+      # Success, we're done.
+      @property_hash[:ensure] = :present
+    else
+      # TODO: Check that this works on older glusterfs as well.
+      if xpath_first(doc, '/cliOutput/opErrno/text()') == '107'
+        # This indicates an unreachable peer.
+        warning(
+          "Peer '#{resource[:peer]}' is unreachable, not actually creating.")
+      else
+        raise Puppet::ExecutionFailure, xpath_first(
+          doc, '/cliOutput/opErrstr/text()')
       end
-      raise
     end
-    # We only set this if we've successfully changed state.
-    @property_hash[:ensure] = :present
+  end
+
+  def create
+    handle_peer_probe(gluster_cmd('peer', 'probe', resource[:peer]))
   end
 
   def destroy
-    gluster('peer', 'detach', resource[:peer], '--xml')
+    gluster_cmd('peer', 'detach', resource[:peer])
     @property_hash[:ensure] = :absent
   end
 

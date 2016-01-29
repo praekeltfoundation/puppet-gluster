@@ -1,20 +1,51 @@
+module XPathHelpers
+  def value_if_text(node)
+    case node.node_type
+    when :text
+      node.value
+    else
+      node
+    end
+  end
+
+  def xpath_match(node, query)
+    REXML::XPath.match(node, query).map { |r| value_if_text(r) }
+  end
+
+  def xpath_first(node, query)
+    value_if_text(REXML::XPath.first(node, query))
+  end
+end
+
 class Puppet::Provider::Gluster < Puppet::Provider
 
   # NOTE: This assumes that child providers define a `gluster` command:
   #
   # has_command(:gluster, 'gluster') do
-  #   environment :HOME => "/tmp"
+  #   environment :HOME => '/tmp'
   # end
+
+  # We want these to be both class and instance methods.
+  extend XPathHelpers
+  include XPathHelpers
 
   # Peer information
 
   def self.parse_peer_status(output)
     doc = REXML::Document.new(output)
-    xpath_match(doc, "/cliOutput/peerStatus/peer/hostname/text()")
+    xpath_match(doc, '/cliOutput/peerStatus/peer/hostname/text()')
+  end
+
+  def self.gluster_cmd(*args)
+    gluster('--xml', '--mode=script', *args)
+  end
+
+  def gluster_cmd(*args)
+    gluster('--xml', '--mode=script', *args)
   end
 
   def self.all_peers
-    parse_peer_status(gluster("peer", "status", "--xml"))
+    parse_peer_status(gluster_cmd('peer', 'status'))
   end
 
   def self.peers_present(required_peers)
@@ -32,18 +63,18 @@ class Puppet::Provider::Gluster < Puppet::Provider
 
   def self.parse_volume_info(output)
     doc = REXML::Document.new(output)
-    xpath_match(doc, "/cliOutput/volInfo/volumes/volume").map do |vol|
+    xpath_match(doc, '/cliOutput/volInfo/volumes/volume').map do |vol|
       extract_volume_info(vol)
     end
   end
 
   def self.volume_status(status_str)
     case status_str
-    when "Created"
+    when 'Created'
       :stopped
-    when "Stopped"
+    when 'Stopped'
       :stopped
-    when "Started"
+    when 'Started'
       :started
     else
       alert("Unknown volume status: #{status_str}")
@@ -52,14 +83,14 @@ class Puppet::Provider::Gluster < Puppet::Provider
   end
 
   def self.brick_peers(bricks)
-    bricks.map { |brick| brick.split(":")[0] }.uniq
+    bricks.map { |brick| brick.split(':')[0] }.uniq
   end
 
   def self.extract_volume_info(vol_xml)
     vol = {
-      :name => xpath_first(vol_xml, "name/text()"),
-      :status => volume_status(xpath_first(vol_xml, "statusStr/text()")),
-      :bricks => xpath_match(vol_xml, "bricks/brick/name/text()"),
+      :name => xpath_first(vol_xml, 'name/text()'),
+      :status => volume_status(xpath_first(vol_xml, 'statusStr/text()')),
+      :bricks => xpath_match(vol_xml, 'bricks/brick/name/text()'),
     }
     vol[:peers] = brick_peers(vol[:bricks])
     if vol[:status] == :started
@@ -71,7 +102,7 @@ class Puppet::Provider::Gluster < Puppet::Provider
   end
 
   def self.all_volumes
-    output = gluster("volume", "info", "all", "--xml")
+    output = gluster_cmd('volume', 'info', 'all')
     parse_volume_info(output)
   end
 
@@ -82,24 +113,5 @@ class Puppet::Provider::Gluster < Puppet::Provider
     # `nil`.
     vols = self.class.all_volumes.select { |v| v[:name] == name }
     vols.first
-  end
-
-  # XPath helpers
-
-  def self.value_if_text(node)
-    case node.node_type
-    when :text
-      node.value
-    else
-      node
-    end
-  end
-
-  def self.xpath_match(node, query)
-    REXML::XPath.match(node, query).map { |r| value_if_text(r) }
-  end
-
-  def self.xpath_first(node, query)
-    value_if_text(REXML::XPath.first(node, query))
   end
 end
