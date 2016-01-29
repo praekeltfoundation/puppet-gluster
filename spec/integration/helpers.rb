@@ -13,8 +13,10 @@ def apply_manifest(manifest_text)
 end
 
 def unconfine(provider_class, confine_values)
-  # Remove a confiner from a provider class so it can be selected. Useful when
-  # missing commands are being faked, etc.
+  # Provider suitability is decided by checking the "confines" on the provider
+  # class. Our test environment might not meet all the declared conditions for
+  # suitability (if we're faking a missing command, for example) so this method
+  # digs aroung in puppet's internals to remove confinements we don't want.
   col = provider_class.instance_variable_get('@confine_collection')
   col.instance_variable_get('@confines').delete_if do |c|
     c.values == confine_values
