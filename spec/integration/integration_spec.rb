@@ -5,8 +5,7 @@ describe 'integration', :integration => true do
   on_supported_os.each do |os, facts|
     context "on #{os}" do
       before :each do
-        allow(Facter).to receive(:collection, &make_fake_collection(facts))
-        Facter.reset
+        stub_facts(facts)
 
         @peer_type = Puppet::Type.type(:gluster_peer)
         @peer_provider = @peer_type.provider(:gluster_peer)
@@ -14,8 +13,7 @@ describe 'integration', :integration => true do
         @volume_provider = @volume_type.provider(:gluster_volume)
 
         unconfine(@peer_provider, ['gluster'])
-        @fake_gluster = FakeGluster.new
-        allow(@peer_provider).to receive(:gluster, &@fake_gluster)
+        @fake_gluster = stub_gluster(@peer_provider)
       end
 
       describe 'gluster_peer' do

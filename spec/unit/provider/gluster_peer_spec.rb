@@ -7,10 +7,8 @@ describe peer_type.provider(:gluster_peer), :unit => true do
   on_supported_os.each do |os, facts|
     context "on #{os}" do
       before :each do
-        allow(Facter).to receive(:collection, &make_fake_collection(facts))
-        Facter.reset
-        @fake_gluster = FakeGluster.new
-        allow(described_class).to receive(:gluster, &@fake_gluster)
+        stub_facts(facts)
+        @fake_gluster = stub_gluster(described_class)
       end
 
       describe 'class methods' do

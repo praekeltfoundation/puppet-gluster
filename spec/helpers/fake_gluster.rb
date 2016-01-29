@@ -233,3 +233,9 @@ class FakeGluster
     method(:gluster).to_proc
   end
 end
+
+def stub_gluster(*objs)
+  fake_gluster = FakeGluster.new
+  objs.each { |obj| allow(obj).to receive(:gluster, &fake_gluster)}
+  fake_gluster
+end

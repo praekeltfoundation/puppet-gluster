@@ -4,8 +4,7 @@ describe Puppet::Type.type(:gluster_peer), :unit => true do
   on_supported_os.each do |os, facts|
     context "on #{os}" do
       before :each do
-        allow(Facter).to receive(:collection, &make_fake_collection(facts))
-        Facter.reset
+        stub_facts(facts)
       end
 
       # This uses `define_method` so that `facts` is in scope.

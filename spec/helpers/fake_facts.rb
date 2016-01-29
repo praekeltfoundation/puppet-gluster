@@ -24,8 +24,8 @@ class FakeFactLoader
   end
 end
 
-def make_fake_collection(facts)
-  ->() do
+def stub_facts(facts)
+  allow(Facter).to receive(:collection) do
     unless Facter.instance_variable_defined?(:@collection) and
         Facter.instance_variable_get(:@collection)
       Facter.instance_variable_set(
@@ -34,4 +34,5 @@ def make_fake_collection(facts)
     end
     Facter.instance_variable_get(:@collection)
   end
+  Facter.reset
 end
