@@ -6,7 +6,3 @@ def props(providers)
     providers.map { |p| props(p) }
   end
 end
-
-# To avoid extra requires all over the place.
-require 'unit/fake_facts'
-require 'unit/fake_gluster'
