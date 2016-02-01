@@ -4,6 +4,16 @@ require 'unit/helpers'
 peer_type = Puppet::Type.type(:gluster_peer)
 
 describe peer_type.provider(:gluster_peer), :unit => true do
+  before :all do
+    # If we've run integration tests before this, we'll already have a default
+    # provider that will break our prefetch tests. Calling `unprovide` has the
+    # side effect of actually deleting the provider class, which breaks our
+    # coverage measurement. To avoid this, we call unprovide once before
+    # running these unit tests instead of calling it after running the
+    # integration tests. Yay puppet.
+    described_class.resource_type.unprovide(:gluster_peer)
+  end
+
   on_supported_os.each do |os, facts|
     context "on #{os}" do
       before :each do
