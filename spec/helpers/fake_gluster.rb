@@ -2,25 +2,33 @@ module GlusterXML
   require 'rexml/document'
 
   def make_cli_elem(name, opRet=0, opErrno=0, opErrstr=nil)
-    doc = REXML::Document.new
-    doc << REXML::XMLDecl.new('1.0', 'UTF-8', 'yes')
-    root = doc.add_element 'cliOutput'
-    add_elem_text(root, 'opRet', opRet.to_s)
-    add_elem_text(root, 'opErrno', opErrno.to_s)
-    add_elem_text(root, 'opErrstr', opErrstr)
+    root = make_cli_root(opRet, opErrno, opErrstr)
     cmd = root.add_element(name)
     cmd
+  end
+
+  def make_cli_err(ops={})
+    ops[:opRet] ||= -1
+    ops[:opErrno] ||= 0
+    ops[:errSt] ||= 'error'
+    make_cli_root(ops[:opRet], ops[:opErrno], ops[:opErrstr])
+  end
+
+  def make_cli_root(opRet, opErrno, opErrstr)
+    doc = REXML::Document.new
+    doc << REXML::XMLDecl.new('1.0', 'UTF-8', 'yes')
+    root = doc.add_element('cliOutput')
+    add_elems(root, [
+        ['opRet', opRet.to_s],
+        ['opErrno', opErrno.to_s],
+        ['opErrstr', opErrstr.to_s],
+      ])
+    root
   end
 
   def uuidify(str)
     # This fakes a UUID by reformatting the MD5 hash of the input.
     Digest::MD5.hexdigest(str).unpack('a8a4a4a4a12').join('-')
-  end
-
-  def add_elem_text(parent, name, text=nil)
-    elem = parent.add_element name
-    elem.add_text text unless text.nil?
-    elem
   end
 
   def add_elems(parent, elems)
@@ -148,6 +156,7 @@ class FakeGluster
   def initialize
     @peers = []
     @volumes = []
+    @unreachable_peers = {}
   end
 
   # Manipulate and inspect state.
@@ -163,6 +172,15 @@ class FakeGluster
 
   def remove_peer(hostname)
     @peers.delete_if { |peer| peer.hostname == hostname }
+  end
+
+  def peer_unreachable(hostname, reason=nil)
+    reason = 'Probe returned with unknown errno 107' if reason.nil?
+    @unreachable_peers[hostname] = reason
+  end
+
+  def peer_reachable(hostname)
+    @unreachable_peers.delete(hostname)
   end
 
   def peer_hosts
@@ -207,8 +225,13 @@ class FakeGluster
 
   def peer_probe(peer)
     # TODO: More comprehensive implementation, including failures.
-    add_peer(peer)
-    elem = make_cli_elem('output')
+    if @unreachable_peers.include? peer
+      elem = make_cli_err(
+        :opErrno => 107, :opErrstr => @unreachable_peers[peer])
+    else
+      add_peer(peer)
+      elem = make_cli_elem('output')
+    end
     format_doc(elem)
   end
 
@@ -222,7 +245,7 @@ class FakeGluster
 
   def volume_info
     elem = make_cli_elem('volInfo').add_element('volumes')
-    add_elem_text(elem, 'count', @volumes.size.to_s)
+    add_elems(elem, [['count', @volumes.size.to_s]])
     @volumes.each { |volume| volume.info_xml(elem) }
     format_doc(elem)
   end
