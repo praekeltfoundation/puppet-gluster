@@ -43,6 +43,7 @@ module GlusterXML
         add_elems(elem, children)
       end
     end
+    parent
   end
 
   def format_doc(doc_or_elem)
@@ -156,6 +157,7 @@ class FakeGluster
   def initialize
     @peers = []
     @volumes = []
+    @error = nil
     @unreachable_peers = {}
   end
 
@@ -171,7 +173,9 @@ class FakeGluster
   end
 
   def remove_peer(hostname)
+    old_count = @peers.size
     @peers.delete_if { |peer| peer.hostname == hostname }
+    old_count != @peers.size
   end
 
   def peer_unreachable(hostname, reason=nil)
@@ -196,6 +200,10 @@ class FakeGluster
     volumes.each { |volume| add_volume(volume) }
   end
 
+  def set_error(opRet, opErrno=-1, opErrstr='')
+    @error = { :opRet => opRet, :opErrstr => opErrno, :opErrstr => opErrstr }
+  end
+
   # Pretend to be the cli.
 
   def gluster(*args)
@@ -203,6 +211,7 @@ class FakeGluster
       raise ArgumentError, "missing '#{arg}'" unless args.include? arg
       args.delete(arg)
     end
+    return format_doc(make_cli_err(@error)) unless @error.nil?
     case args
     when ['peer', 'status']
       peer_status
@@ -224,23 +233,18 @@ class FakeGluster
   end
 
   def peer_probe(peer)
-    # TODO: More comprehensive implementation, including failures.
     if @unreachable_peers.include? peer
-      elem = make_cli_err(
-        :opErrno => 107, :opErrstr => @unreachable_peers[peer])
+      format_doc(make_cli_err(
+          :opErrno => 107, :opErrstr => @unreachable_peers[peer]))
     else
       add_peer(peer)
-      elem = make_cli_elem('output')
+      format_doc(make_cli_elem('output'))
     end
-    format_doc(elem)
   end
 
   def peer_detach(peer)
-    # TODO: More comprehensive implementation, including failures.
     remove_peer(peer)
-    elem = make_cli_elem('output')
-    add_elems(elem, 'success')
-    format_doc(elem)
+    format_doc(add_elems(make_cli_elem('output'), 'success'))
   end
 
   def volume_info

@@ -16,7 +16,7 @@ describe 'integration', :integration => true do
         @fake_gluster = stub_gluster(@peer_provider)
       end
 
-      describe 'gluster_peer' do
+      describe 'gluster_peer create' do
         it 'should add a single peer (manifest)' do
           expect(@fake_gluster.peer_hosts).to eq([])
           x = apply_node_manifest(<<-'MANIFEST')
@@ -117,6 +117,58 @@ describe 'integration', :integration => true do
           expect(x.any_failed?).to be_nil
           expect(x.changed?.map(&:to_s)).to eq(['Gluster_peer[gfs1.local]'])
           expect(@fake_gluster.peer_hosts).to eq(['gfs1.local'])
+        end
+
+        it 'should fail on an unexpected error' do
+          @fake_gluster.set_error(-1, 2, 'A bad thing happened.')
+          x = apply_node_manifest(<<-'MANIFEST')
+          gluster_peer { 'gfs1.local': }
+          MANIFEST
+          expect(x.any_failed?.resource.to_s).to eq('Gluster_peer[gfs1.local]')
+          expect(x.changed?.map(&:to_s)).to eq([])
+          expect(@fake_gluster.peer_hosts).to eq([])
+        end
+      end
+
+      describe 'gluster_peer destroy' do
+        it 'should remove a single peer' do
+          @fake_gluster.add_peer('gfs1.local')
+          expect(@fake_gluster.peer_hosts).to eq(['gfs1.local'])
+          x = apply_node_manifest(<<-'MANIFEST')
+          gluster_peer { 'gfs1.local':
+            ensure => 'absent',
+          }
+          MANIFEST
+          expect(x.any_failed?).to be_nil
+          expect(x.changed?.map(&:to_s)).to eq(['Gluster_peer[gfs1.local]'])
+          expect(@fake_gluster.peer_hosts).to eq([])
+        end
+
+        it 'should not remove a missing peer' do
+          @fake_gluster.add_peer('gfs1.local')
+          expect(@fake_gluster.peer_hosts).to eq(['gfs1.local'])
+          x = apply_node_manifest(<<-'MANIFEST')
+          gluster_peer { 'missing.local':
+            ensure => 'absent',
+          }
+          MANIFEST
+          expect(x.any_failed?).to be_nil
+          expect(x.changed?.map(&:to_s)).to eq([])
+          expect(@fake_gluster.peer_hosts).to eq(['gfs1.local'])
+        end
+
+        it 'should remove multiple peers' do
+          @fake_gluster.add_peers('gfs1.local', 'gfs2.local')
+          expect(@fake_gluster.peer_hosts).to eq(['gfs1.local', 'gfs2.local'])
+          x = apply_node_manifest(<<-'MANIFEST')
+          gluster_peer { ['gfs1.local', 'gfs2.local']:
+            ensure => 'absent',
+          }
+          MANIFEST
+          expect(x.any_failed?).to be_nil
+          expect(x.changed?.map(&:to_s)).to eq(
+            ['Gluster_peer[gfs1.local]', 'Gluster_peer[gfs2.local]'])
+          expect(@fake_gluster.peer_hosts).to eq([])
         end
       end
 
