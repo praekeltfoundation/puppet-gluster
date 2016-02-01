@@ -17,7 +17,7 @@ describe 'integration', :integration => true do
       end
 
       describe 'gluster_peer' do
-        it 'should add a single peer' do
+        it 'should add a single peer (manifest)' do
           expect(@fake_gluster.peer_hosts).to eq([])
           x = apply_manifest(<<-'END'
             node default {
@@ -25,6 +25,14 @@ describe 'integration', :integration => true do
             }
             END
           )
+          expect(x.any_failed?).to be_nil
+          expect(x.changed?.map(&:to_s)).to eq(['Gluster_peer[gfs1.local]'])
+          expect(@fake_gluster.peer_hosts).to eq(['gfs1.local'])
+        end
+
+        it 'should add a single peer (resources)' do
+          expect(@fake_gluster.peer_hosts).to eq([])
+          x = apply_catalog_with(@peer_type.new(:peer => 'gfs1.local'))
           expect(x.any_failed?).to be_nil
           expect(x.changed?.map(&:to_s)).to eq(['Gluster_peer[gfs1.local]'])
           expect(@fake_gluster.peer_hosts).to eq(['gfs1.local'])
