@@ -9,6 +9,7 @@ describe peer_type.provider(:gluster_peer), :unit => true do
       before :each do
         stub_facts(facts)
         @fake_gluster = stub_gluster(described_class)
+        @peer_type = described_class.resource_type
       end
 
       describe 'class methods' do
@@ -24,10 +25,17 @@ describe peer_type.provider(:gluster_peer), :unit => true do
           expect(props(described_class.instances)).to eq([])
         end
 
+        it 'should prefetch no providers' do
+          res = [1, 2, 3].map { |n| @peer_type.new(:name => "gfs#{n}.local") }
+          expect(res_providers(res)).to eq([nil, nil, nil])
+          described_class.prefetch(res_hash(res))
+          expect(res_providers(res)).to eq([nil, nil, nil])
+        end
+
         describe 'a new peer' do
           before :each do
-            res = described_class.resource_type.new(:name => 'new1.local')
-            @new_peer = described_class.new(res)
+            @new_peer = described_class.new(
+              @peer_type.new(:name => 'new1.local'))
           end
 
           it 'should not exist' do
@@ -55,10 +63,17 @@ describe peer_type.provider(:gluster_peer), :unit => true do
               }])
         end
 
+        it 'should prefetch one provider' do
+          res = [1, 2, 3].map { |n| @peer_type.new(:name => "gfs#{n}.local") }
+          expect(res_providers(res)).to eq([nil, nil, nil])
+          described_class.prefetch(res_hash(res))
+          expect(res_providers(res)).to eq(['gfs1.local', nil, nil])
+        end
+
         describe 'a new peer' do
           before :each do
-            res = described_class.resource_type.new(:name => 'new2.local')
-            @new_peer = described_class.new(res)
+            @new_peer = described_class.new(
+              @peer_type.new(:name => 'new2.local'))
           end
 
           it 'should not exist' do
@@ -76,7 +91,7 @@ describe peer_type.provider(:gluster_peer), :unit => true do
         describe 'an existing peer' do
           before :each do
             (@peer,) = described_class.instances
-            @peer.resource = described_class.resource_type.new(
+            @peer.resource = @peer_type.new(
               :name => 'gfs1.local', :ensure => :present)
           end
 
@@ -107,6 +122,44 @@ describe peer_type.provider(:gluster_peer), :unit => true do
                 :peer => 'gfs2.local',
                 :ensure => :present,
               }])
+        end
+
+        it 'should prefetch two providers' do
+          res = [1, 2, 3].map { |n| @peer_type.new(:name => "gfs#{n}.local") }
+          expect(res_providers(res)).to eq([nil, nil, nil])
+          described_class.prefetch(res_hash(res))
+          expect(res_providers(res)).to eq(['gfs1.local', 'gfs2.local', nil])
+        end
+      end
+
+      describe 'edge cases' do
+        before :each do
+          @unreachable_peer = described_class.new(
+            @peer_type.new(:name => 'unreachable.local'))
+        end
+
+        it 'should not explode if a peer is unreachable (old msg)' do
+          @fake_gluster.peer_unreachable(
+            'unreachable.local', 'Probe returned with unknown errno 107')
+          expect(@fake_gluster.peer_hosts).to eq([])
+          @unreachable_peer.create
+          expect(@fake_gluster.peer_hosts).to eq([])
+        end
+
+        it 'should not explode if a peer is unreachable (new msg)' do
+          @fake_gluster.peer_unreachable(
+            'unreachable.local',
+            'Probe returned with Transport endpoint is not connected')
+          expect(@fake_gluster.peer_hosts).to eq([])
+          @unreachable_peer.create
+          expect(@fake_gluster.peer_hosts).to eq([])
+        end
+
+        it 'should fail on an unexpected error' do
+          @fake_gluster.set_error(-1, 2, 'A bad thing happened.')
+          expect {
+            @unreachable_peer.create
+          }.to raise_error(Puppet::ExecutionFailure)
         end
       end
 
