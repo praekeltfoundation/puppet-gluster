@@ -1,17 +1,14 @@
 require 'spec_helper'
-require 'unit/provider/helpers'
-require 'unit/provider/fake_gluster'
+require 'unit/helpers'
 
-describe Puppet::Type.type(:gluster_peer).provider(:gluster_peer) do
+peer_type = Puppet::Type.type(:gluster_peer)
+
+describe peer_type.provider(:gluster_peer), :unit => true do
   on_supported_os.each do |os, facts|
     context "on #{os}" do
       before :each do
-        Facter.clear
-        facts.each do |k, v|
-          Facter.stubs(:fact).with(k).returns Facter.add(k) { setcode { v } }
-        end
-        @fake_gluster = FakeGluster.new
-        allow(described_class).to receive(:gluster, &@fake_gluster)
+        stub_facts(facts)
+        @fake_gluster = stub_gluster(described_class)
       end
 
       describe 'class methods' do

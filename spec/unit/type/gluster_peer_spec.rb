@@ -1,13 +1,10 @@
 require 'spec_helper'
 
-describe Puppet::Type.type(:gluster_peer) do
+describe Puppet::Type.type(:gluster_peer), :unit => true do
   on_supported_os.each do |os, facts|
     context "on #{os}" do
       before :each do
-        Facter.clear
-        facts.each do |k, v|
-          Facter.stubs(:fact).with(k).returns Facter.add(k) { setcode { v } }
-        end
+        stub_facts(facts)
       end
 
       # This uses `define_method` so that `facts` is in scope.
@@ -103,6 +100,57 @@ describe Puppet::Type.type(:gluster_peer) do
               :peer => 'peer.example.com',
               :ensure => 'unhappy',
             )}.to raise_error(Puppet::Error, /Invalid value/)
+          end
+        end
+
+        describe 'ignoring peers' do
+          it 'should not ignore arbitrary peers' do
+            rtype = described_class.new(
+              :peer => 'peer.example.com',
+              :ensure => :present)
+            expect(rtype.parameter(:ensure).insync? :absent).to eq(false)
+            expect(rtype.parameter(:ensure).insync? :present).to eq(true)
+          end
+
+          it 'should ignore localhost' do
+            # We ignore peers by always pretending they're in sync.
+            rtype = described_class.new(
+              :peer => '127.0.0.1',
+              :ensure => :present)
+            expect(rtype.parameter(:ensure).insync? :absent).to eq(true)
+            expect(rtype.parameter(:ensure).insync? :present).to eq(true)
+          end
+
+          it 'should ignore ignored peers' do
+            # We ignore peers by always pretending they're in sync.
+            rtype = described_class.new(
+              :peer => 'peer.example.com',
+              :ensure => :present,
+              :ignore_peers => ['peer.example.com'])
+            expect(rtype.parameter(:ensure).insync? :absent).to eq(true)
+            expect(rtype.parameter(:ensure).insync? :present).to eq(true)
+          end
+        end
+
+        describe 'autorequire' do
+          before :each do
+            @rtype = described_class.new(
+              :peer => 'peer.example.com',
+              :ensure => :present)
+            @cat = Puppet::Resource::Catalog.new
+          end
+
+          it 'should require Service[glusterfs-server] if declared' do
+            @cat.create_resource(:service, :title => 'glusterfs-server')
+            expect(
+              @rtype.autorequire(@cat).map { |r| r.source.to_s }
+            ).to eq(["Service[glusterfs-server]"])
+          end
+
+          it 'should not require Service[glusterfs-server] unless declared' do
+            expect(
+              @rtype.autorequire(@cat).map { |r| r.source.to_s }
+            ).to eq([])
           end
         end
       end

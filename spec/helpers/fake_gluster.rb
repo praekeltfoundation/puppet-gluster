@@ -181,8 +181,10 @@ class FakeGluster
   # Pretend to be the cli.
 
   def gluster(*args)
-    raise ArgumentError, "missing '--xml'" unless args.include? '--xml'
-    args.delete('--xml')
+    ['--xml', '--mode=script'].each do |arg|
+      raise ArgumentError, "missing '#{arg}'" unless args.include? arg
+      args.delete(arg)
+    end
     case args
     when ['peer', 'status']
       peer_status
@@ -206,11 +208,16 @@ class FakeGluster
   def peer_probe(peer)
     # TODO: More comprehensive implementation, including failures.
     add_peer(peer)
+    elem = make_cli_elem('output')
+    format_doc(elem)
   end
 
   def peer_detach(peer)
     # TODO: More comprehensive implementation, including failures.
     remove_peer(peer)
+    elem = make_cli_elem('output')
+    add_elems(elem, 'success')
+    format_doc(elem)
   end
 
   def volume_info
@@ -225,4 +232,10 @@ class FakeGluster
   def to_proc
     method(:gluster).to_proc
   end
+end
+
+def stub_gluster(*objs)
+  fake_gluster = FakeGluster.new
+  objs.each { |obj| allow(obj).to receive(:gluster, &fake_gluster)}
+  fake_gluster
 end

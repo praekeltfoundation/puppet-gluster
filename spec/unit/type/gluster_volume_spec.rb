@@ -1,13 +1,10 @@
 require 'spec_helper'
 
-describe Puppet::Type.type(:gluster_volume) do
+describe Puppet::Type.type(:gluster_volume), :unit => true do
   on_supported_os.each do |os, facts|
     context "on #{os}" do
       before :each do
-        Facter.clear
-        facts.each do |k, v|
-          Facter.stubs(:fact).with(k).returns Facter.add(k) { setcode { v } }
-        end
+        stub_facts(facts)
       end
 
       describe 'when validating attributes' do
@@ -129,6 +126,41 @@ describe Puppet::Type.type(:gluster_volume) do
               :name => 'foo',
               :ensure => 'unhappy',
             )}.to raise_error(Puppet::Error, /Invalid value/)
+          end
+        end
+
+        describe 'autorequire' do
+          before :each do
+            def vol(*bricks)
+              described_class.new(
+                :name => 'foo',
+                :ensure => :present,
+                :bricks => bricks,
+              )
+            end
+            @cat = Puppet::Resource::Catalog.new
+          end
+
+          it 'should require Service[glusterfs-server] if declared' do
+            @cat.create_resource(:service, :title => 'glusterfs-server')
+            expect(
+              vol().autorequire(@cat).map { |r| r.source.to_s }
+            ).to eq(["Service[glusterfs-server]"])
+          end
+
+          it 'should not require Service[glusterfs-server] unless declared' do
+            expect(
+              vol().autorequire(@cat).map { |r| r.source.to_s }
+            ).to eq([])
+          end
+
+          it 'should require any brick peers that are declared' do
+            @cat.create_resource(:gluster_peer, :title => 'p1')
+            @cat.create_resource(:gluster_peer, :title => 'p2')
+            @cat.create_resource(:gluster_peer, :title => 'p4')
+            expect(vol('p1:/b', 'p2:/b', 'p3:/b').autorequire(@cat).map { |r|
+                r.source.to_s
+              }).to eq(["Gluster_peer[p1]", "Gluster_peer[p2]"])
           end
         end
       end
