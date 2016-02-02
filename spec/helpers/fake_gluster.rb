@@ -235,6 +235,11 @@ class FakeGluster
     volumes.each { |volume| add_volume(volume) }
   end
 
+  def get_volume(name)
+    (volume,) = @volumes.select { |vol| vol.name == name }
+    volume
+  end
+
   def volume_names
     @volumes.map(&:name)
   end
@@ -321,14 +326,14 @@ class FakeGluster
   end
 
   def cmd_volume_delete(name)
-    (volume,) = @volumes.find { |vol| vol.name == name }
+    (volume,) = @volumes.select { |vol| vol.name == name }
     assert !volume.started?, "volume started (status: #{volume[:status]})"
     @volumes.delete(volume)
     format_doc(volume.short_xml(make_cli_elem('volDelete')))
   end
 
   def cmd_volume_start(name)
-    (volume,) = @volumes.find { |vol| vol.name == name }
+    (volume,) = @volumes.select { |vol| vol.name == name }
     assert !volume.started?, "volume started (status: #{volume[:status]})"
     volume[:status] = 1
     volume[:statusStr] = 'Started'
@@ -336,7 +341,7 @@ class FakeGluster
   end
 
   def cmd_volume_stop(name)
-    (volume,) = @volumes.find { |vol| vol.name == name }
+    (volume,) = @volumes.select { |vol| vol.name == name }
     assert volume.started?, "volume not started (status: #{volume[:status]})"
     volume[:status] = 2
     volume[:statusStr] = 'Stopped'

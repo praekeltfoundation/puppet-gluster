@@ -7,13 +7,18 @@ describe 'integration', :integration => true do
       before :each do
         stub_facts(facts)
 
+        # # Uncomment this to get logging output.
+        # Puppet::Util::Log.newdestination(:console)
+        # Puppet::Util::Log.level = :info
+
         @peer_type = Puppet::Type.type(:gluster_peer)
         @peer_provider = @peer_type.provider(:gluster_peer)
         @volume_type = Puppet::Type.type(:gluster_volume)
         @volume_provider = @volume_type.provider(:gluster_volume)
 
         unconfine(@peer_provider, ['gluster'])
-        @fake_gluster = stub_gluster(@peer_provider)
+        unconfine(@volume_provider, ['gluster'])
+        @fake_gluster = stub_gluster(@peer_provider, @volume_provider)
       end
 
       describe 'gluster_peer create' do
@@ -46,7 +51,7 @@ describe 'integration', :integration => true do
           expect(@fake_gluster.peer_hosts).to eq(['gfs1.local', 'gfs2.local'])
         end
 
-        it 'should only add missing peers' do
+        it 'should only add a missing peer' do
           @fake_gluster.add_peer('gfs1.local')
           expect(@fake_gluster.peer_hosts).to eq(['gfs1.local'])
           x = apply_node_manifest(<<-'MANIFEST')
@@ -130,6 +135,7 @@ describe 'integration', :integration => true do
         end
       end
 
+
       describe 'gluster_peer destroy' do
         it 'should remove a single peer' do
           @fake_gluster.add_peer('gfs1.local')
@@ -170,6 +176,238 @@ describe 'integration', :integration => true do
             ['Gluster_peer[gfs1.local]', 'Gluster_peer[gfs2.local]'])
           expect(@fake_gluster.peer_hosts).to eq([])
         end
+      end
+
+
+      describe 'gluster_volume create' do
+        it 'should add a volume with a single local brick' do
+          expect(@fake_gluster.volume_names).to eq([])
+          x = apply_node_manifest(<<-'MANIFEST')
+          gluster_volume { 'vol1':
+            bricks => ["${fqdn}:/b1/v1"],
+          }
+          MANIFEST
+          expect(x.any_failed?).to be_nil
+          expect(x.changed?.map(&:to_s)).to eq(['Gluster_volume[vol1]'])
+          expect(@fake_gluster.volume_names).to eq(['vol1'])
+          expect(@fake_gluster.get_volume('vol1').started?).to eq(true)
+        end
+
+        it 'should add a volume with force' do
+          expect(@fake_gluster.volume_names).to eq([])
+          x = apply_node_manifest(<<-'MANIFEST')
+          gluster_volume { 'vol1':
+            bricks => ["${fqdn}:/b1/v1"],
+            force => true,
+          }
+          MANIFEST
+          expect(x.any_failed?).to be_nil
+          expect(x.changed?.map(&:to_s)).to eq(['Gluster_volume[vol1]'])
+          expect(@fake_gluster.volume_names).to eq(['vol1'])
+          expect(@fake_gluster.get_volume('vol1').started?).to eq(true)
+          # TODO: Check that force was actually used.
+        end
+
+        it 'should add a volume with a single remote brick' do
+          expect(@fake_gluster.volume_names).to eq([])
+          x = apply_node_manifest(<<-'MANIFEST')
+          gluster_peer { 'gfs1.local': }
+          gluster_volume { 'vol1':
+            bricks => ['gfs1.local:/b1/v1'],
+          }
+          MANIFEST
+          expect(x.any_failed?).to be_nil
+          expect(x.changed?.map(&:to_s).sort).to eq([
+              'Gluster_peer[gfs1.local]',
+              'Gluster_volume[vol1]',
+            ])
+          expect(@fake_gluster.volume_names).to eq(['vol1'])
+          expect(@fake_gluster.get_volume('vol1').started?).to eq(true)
+        end
+
+        it 'should add a volume with two bricks' do
+          expect(@fake_gluster.volume_names).to eq([])
+          x = apply_node_manifest(<<-'MANIFEST')
+          gluster_peer { 'gfs1.local': }
+          gluster_volume { 'vol1':
+            bricks => ["${fqdn}:/b1/v1", 'gfs1.local:/b1/v1'],
+          }
+          MANIFEST
+          expect(x.any_failed?).to be_nil
+          expect(x.changed?.map(&:to_s).sort).to eq([
+              'Gluster_peer[gfs1.local]',
+              'Gluster_volume[vol1]',
+            ])
+          expect(@fake_gluster.volume_names).to eq(['vol1'])
+          vol = @fake_gluster.get_volume('vol1')
+          expect(vol.started?).to eq(true)
+          expect(vol.bricks.map { |b| b[:name] }.sort).to eq(
+            ["#{Facter.value(:fqdn)}:/b1/v1", 'gfs1.local:/b1/v1'].sort)
+          expect(vol[:replica]).to eq(1)
+        end
+
+        it 'should add a replicated volume with two bricks' do
+          expect(@fake_gluster.volume_names).to eq([])
+          x = apply_node_manifest(<<-'MANIFEST')
+          gluster_peer { 'gfs1.local': }
+          gluster_volume { 'vol1':
+            replica => 2,
+            bricks => ["${fqdn}:/b1/v1", 'gfs1.local:/b1/v1'],
+          }
+          MANIFEST
+          expect(x.any_failed?).to be_nil
+          expect(x.changed?.map(&:to_s).sort).to eq([
+              'Gluster_peer[gfs1.local]',
+              'Gluster_volume[vol1]',
+            ])
+          expect(@fake_gluster.volume_names).to eq(['vol1'])
+          vol = @fake_gluster.get_volume('vol1')
+          expect(vol.started?).to eq(true)
+          expect(vol.bricks.map { |b| b[:name] }.sort).to eq(
+            ["#{Facter.value(:fqdn)}:/b1/v1", 'gfs1.local:/b1/v1'].sort)
+          expect(vol[:replica]).to eq('2')
+        end
+
+        it 'should reject an invalid replica value' do
+          expect {
+            apply_node_manifest(<<-'MANIFEST')
+            gluster_volume { 'vol1':
+              replica => 'twelve',
+              bricks => ["${fqdn}:/b1/v1"],
+            }
+            MANIFEST
+          }.to raise_error(Puppet::ResourceError)
+        end
+
+        it 'should only add a missing volume' do
+          @fake_gluster.add_volume('vol1', ["#{Facter.value(:fqdn)}:/b1/v1"])
+          expect(@fake_gluster.volume_names).to eq(['vol1'])
+          x = apply_node_manifest(<<-'MANIFEST')
+          gluster_volume { 'vol1':
+            bricks => ["${fqdn}:/b1/v1"],
+          }
+          MANIFEST
+          expect(x.any_failed?).to be_nil
+          expect(x.changed?.map(&:to_s)).to eq([])
+          expect(@fake_gluster.volume_names).to eq(['vol1'])
+          expect(@fake_gluster.get_volume('vol1').started?).to eq(true)
+        end
+
+        it 'should start a stopped volume' do
+          @fake_gluster.add_volume(
+            'vol1', ["#{Facter.value(:fqdn)}:/b1/v1"],
+            :status => 2, :statusStr => 'Stopped')
+          expect(@fake_gluster.volume_names).to eq(['vol1'])
+          expect(@fake_gluster.get_volume('vol1').started?).to eq(false)
+          x = apply_node_manifest(<<-'MANIFEST')
+          gluster_volume { 'vol1':
+            bricks => ["${fqdn}:/b1/v1"],
+          }
+          MANIFEST
+          expect(x.any_failed?).to be_nil
+          expect(x.changed?.map(&:to_s)).to eq(['Gluster_volume[vol1]'])
+          expect(@fake_gluster.volume_names).to eq(['vol1'])
+          expect(@fake_gluster.get_volume('vol1').started?).to eq(true)
+        end
+
+        # TODO: More edge case tests.
+
+      end
+
+
+      describe 'gluster_volume ensure_stopped' do
+        it 'should add a volume without starting it' do
+          expect(@fake_gluster.volume_names).to eq([])
+          x = apply_node_manifest(<<-'MANIFEST')
+          gluster_volume { 'vol1':
+            ensure => 'stopped',
+            bricks => ["${fqdn}:/b1/v1"],
+          }
+          MANIFEST
+          expect(x.any_failed?).to be_nil
+          expect(x.changed?.map(&:to_s)).to eq(['Gluster_volume[vol1]'])
+          expect(@fake_gluster.volume_names).to eq(['vol1'])
+          expect(@fake_gluster.get_volume('vol1').started?).to eq(false)
+        end
+
+        it 'should only add a missing volume' do
+          @fake_gluster.add_volume(
+            'vol1', ["#{Facter.value(:fqdn)}:/b1/v1"],
+            :status => 2, :statusStr => 'Stopped')
+          expect(@fake_gluster.volume_names).to eq(['vol1'])
+          expect(@fake_gluster.get_volume('vol1').started?).to eq(false)
+          x = apply_node_manifest(<<-'MANIFEST')
+          gluster_volume { 'vol1':
+            ensure => 'stopped',
+            bricks => ["${fqdn}:/b1/v1"],
+          }
+          MANIFEST
+          expect(x.any_failed?).to be_nil
+          expect(x.changed?.map(&:to_s)).to eq([])
+          expect(@fake_gluster.volume_names).to eq(['vol1'])
+          expect(@fake_gluster.get_volume('vol1').started?).to eq(false)
+        end
+
+        it 'should stop a started volume' do
+          @fake_gluster.add_volume('vol1', ["#{Facter.value(:fqdn)}:/b1/v1"])
+          expect(@fake_gluster.volume_names).to eq(['vol1'])
+          expect(@fake_gluster.get_volume('vol1').started?).to eq(true)
+          x = apply_node_manifest(<<-'MANIFEST')
+          gluster_volume { 'vol1':
+            ensure => 'stopped',
+            bricks => ["${fqdn}:/b1/v1"],
+          }
+          MANIFEST
+          expect(x.any_failed?).to be_nil
+          expect(x.changed?.map(&:to_s)).to eq(['Gluster_volume[vol1]'])
+          expect(@fake_gluster.volume_names).to eq(['vol1'])
+          expect(@fake_gluster.get_volume('vol1').started?).to eq(false)
+        end
+
+        # TODO: More edge case tests.
+
+      end
+
+
+      describe 'gluster_volume destroy' do
+        it 'should remove a started volume' do
+          @fake_gluster.add_volume('vol1', ["#{Facter.value(:fqdn)}:/b1/v1"])
+          expect(@fake_gluster.volume_names).to eq(['vol1'])
+          expect(@fake_gluster.get_volume('vol1').started?).to eq(true)
+          x = apply_node_manifest(<<-'MANIFEST')
+          gluster_volume { 'vol1': ensure => 'absent' }
+          MANIFEST
+          expect(x.any_failed?).to be_nil
+          expect(x.changed?.map(&:to_s)).to eq(['Gluster_volume[vol1]'])
+          expect(@fake_gluster.volume_names).to eq([])
+        end
+
+        it 'should remove a stopped volume' do
+          @fake_gluster.add_volume(
+            'vol1', ["#{Facter.value(:fqdn)}:/b1/v1"],
+            :status => 2, :statusStr => 'Stopped')
+          expect(@fake_gluster.volume_names).to eq(['vol1'])
+          expect(@fake_gluster.get_volume('vol1').started?).to eq(false)
+          x = apply_node_manifest(<<-'MANIFEST')
+          gluster_volume { 'vol1': ensure => 'absent' }
+          MANIFEST
+          expect(x.any_failed?).to be_nil
+          expect(x.changed?.map(&:to_s)).to eq(['Gluster_volume[vol1]'])
+          expect(@fake_gluster.volume_names).to eq([])
+        end
+
+        it 'should only remove an existing volume' do
+          expect(@fake_gluster.volume_names).to eq([])
+          x = apply_node_manifest(<<-'MANIFEST')
+          gluster_volume { 'vol1': ensure => 'absent' }
+          MANIFEST
+          expect(x.any_failed?).to be_nil
+          expect(x.changed?.map(&:to_s)).to eq([])
+          expect(@fake_gluster.volume_names).to eq([])
+        end
+
+        # TODO: More edge case tests.
+
       end
 
     end
