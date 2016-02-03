@@ -236,8 +236,9 @@ class FakeGluster
   end
 
   def get_volume(name)
-    (volume,) = @volumes.select { |vol| vol.name == name }
-    volume
+    vols = @volumes.select { |vol| vol.name == name }
+    assert vols.size == 1, "Expected to find one volume, found #{vols.size}"
+    vols[0]
   end
 
   def volume_names
@@ -326,14 +327,14 @@ class FakeGluster
   end
 
   def cmd_volume_delete(name)
-    (volume,) = @volumes.select { |vol| vol.name == name }
+    volume = get_volume(name)
     assert !volume.started?, "volume started (status: #{volume[:status]})"
     @volumes.delete(volume)
     format_doc(volume.short_xml(make_cli_elem('volDelete')))
   end
 
   def cmd_volume_start(name)
-    (volume,) = @volumes.select { |vol| vol.name == name }
+    volume = get_volume(name)
     assert !volume.started?, "volume started (status: #{volume[:status]})"
     volume[:status] = 1
     volume[:statusStr] = 'Started'
@@ -341,7 +342,7 @@ class FakeGluster
   end
 
   def cmd_volume_stop(name)
-    (volume,) = @volumes.select { |vol| vol.name == name }
+    volume = get_volume(name)
     assert volume.started?, "volume not started (status: #{volume[:status]})"
     volume[:status] = 2
     volume[:statusStr] = 'Stopped'
