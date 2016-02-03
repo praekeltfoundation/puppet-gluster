@@ -1,4 +1,6 @@
 RSpec::Matchers.define :have_logged do |*expected|
+  # TODO: Better negative matching if and when it's necessary.
+
   def call_and_collect(&block)
     logs = []
     destination = Puppet::Test::LogCollector.new(logs)
@@ -14,9 +16,18 @@ RSpec::Matchers.define :have_logged do |*expected|
 
   match do |block|
     logs = call_and_collect(&block)
-    expected.all? do |val, level=nil|
+    @unmatched = expected.find do |val, level=nil|
       actual = logs.select { |log| level.nil? or log.level == level }
-      actual.any? { |log| values_match?(val, log.message) }
+      actual.none? { |log| values_match?(val, log.message) }
+    end
+    @unmatched.nil?
+  end
+
+  failure_message do |_|
+    if @unmatched.is_a? Array
+      "no logged #{@unmatched[1]} messages match #{@unmatched[0].inspect}"
+    else
+      "no logged messages match #{@unmatched.inspect}"
     end
   end
 
