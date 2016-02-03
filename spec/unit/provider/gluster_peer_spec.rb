@@ -167,9 +167,7 @@ describe peer_type.provider(:gluster_peer), :unit => true do
 
         it 'should fail on an unexpected error' do
           @fake_gluster.set_error(-1, 2, 'A bad thing happened.')
-          expect {
-            @unreachable_peer.create
-          }.to raise_error(Puppet::ExecutionFailure)
+          expect { @unreachable_peer.create }.to raise_error(GlusterCmdError)
         end
       end
 

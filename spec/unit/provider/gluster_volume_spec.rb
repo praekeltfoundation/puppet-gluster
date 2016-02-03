@@ -202,6 +202,18 @@ describe volume_type.provider(:gluster_volume), :unit => true do
         end
       end
 
+      describe 'edge cases' do
+        before :each do
+          @new_volume = described_class.new(
+            @volume_type.new(:name => 'vol1', :bricks => ['gfs1.local:/b/v']))
+        end
+
+        it 'should fail on an unexpected error' do
+          @fake_gluster.set_error(-1, 2, 'A bad thing happened.')
+          expect { @new_volume.create }.to raise_error(GlusterCmdError)
+        end
+      end
+
     end
   end
 end
