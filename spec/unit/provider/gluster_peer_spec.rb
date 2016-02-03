@@ -152,7 +152,8 @@ describe peer_type.provider(:gluster_peer), :unit => true do
           @fake_gluster.peer_unreachable(
             'unreachable.local', 'Probe returned with unknown errno 107')
           expect(@fake_gluster.peer_hosts).to eq([])
-          @unreachable_peer.create
+          expect { @unreachable_peer.create }.to have_logged(
+            [/not actually creating.*unknown errno 107/, :warning])
           expect(@fake_gluster.peer_hosts).to eq([])
         end
 
@@ -161,7 +162,8 @@ describe peer_type.provider(:gluster_peer), :unit => true do
             'unreachable.local',
             'Probe returned with Transport endpoint is not connected')
           expect(@fake_gluster.peer_hosts).to eq([])
-          @unreachable_peer.create
+          expect { @unreachable_peer.create }.to have_logged(
+            [/not actually creating.*Transport endpoint is not/, :warning])
           expect(@fake_gluster.peer_hosts).to eq([])
         end
 
