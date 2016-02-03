@@ -1,3 +1,9 @@
+def apply_node_manifest(manifest_text)
+  # See `apply_manifest`. This just adds node boilerplate and calls that.
+  apply_manifest("node default {\n#{manifest_text}\n}")
+end
+
+
 def apply_manifest(manifest_text)
   # Applies the given manifest in as safe a manner as possible.
   # NOTE: This will try (and fail) to create files, etc.

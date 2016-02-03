@@ -1,26 +1,38 @@
+def assert(cond, msg='Assertion failed')
+  raise Exception, msg unless cond
+end
+
 module GlusterXML
   require 'rexml/document'
 
   def make_cli_elem(name, opRet=0, opErrno=0, opErrstr=nil)
-    doc = REXML::Document.new
-    doc << REXML::XMLDecl.new('1.0', 'UTF-8', 'yes')
-    root = doc.add_element 'cliOutput'
-    add_elem_text(root, 'opRet', opRet.to_s)
-    add_elem_text(root, 'opErrno', opErrno.to_s)
-    add_elem_text(root, 'opErrstr', opErrstr)
+    root = make_cli_root(opRet, opErrno, opErrstr)
     cmd = root.add_element(name)
     cmd
+  end
+
+  def make_cli_err(ops={})
+    ops[:opRet] ||= -1
+    ops[:opErrno] ||= 0
+    ops[:errSt] ||= 'error'
+    make_cli_root(ops[:opRet], ops[:opErrno], ops[:opErrstr])
+  end
+
+  def make_cli_root(opRet, opErrno, opErrstr)
+    doc = REXML::Document.new
+    doc << REXML::XMLDecl.new('1.0', 'UTF-8', 'yes')
+    root = doc.add_element('cliOutput')
+    add_elems(root, [
+        ['opRet', opRet.to_s],
+        ['opErrno', opErrno.to_s],
+        ['opErrstr', opErrstr.to_s],
+      ])
+    root
   end
 
   def uuidify(str)
     # This fakes a UUID by reformatting the MD5 hash of the input.
     Digest::MD5.hexdigest(str).unpack('a8a4a4a4a12').join('-')
-  end
-
-  def add_elem_text(parent, name, text=nil)
-    elem = parent.add_element name
-    elem.add_text text unless text.nil?
-    elem
   end
 
   def add_elems(parent, elems)
@@ -35,6 +47,7 @@ module GlusterXML
         add_elems(elem, children)
       end
     end
+    parent
   end
 
   def format_doc(doc_or_elem)
@@ -90,16 +103,18 @@ class FakeVolume
       name = volume_hash[:name]
       bricks = volume_hash[:bricks]
     end
-    @name = name
-    @bricks = bricks.map do |brick|
+    @props = volume_hash.clone
+    @props[:name] = name
+    @props[:id] ||= uuidify(name)
+    @props[:bricks] = bricks.map do |brick|
+      brick = {:name => brick} if brick.is_a? String
       brick[:uuid] ||= uuidify(brick[:name])
-      brick[:hostUuid] ||= uuidify(brick[:name].split(':')[0])
+      brick[:peer] = brick[:name].split(':')[0]  # Used internally only.
+      brick[:hostUuid] ||= uuidify(brick[:name])
       brick
     end
-    @props = volume_hash.clone
     # FIXME: Build some of these values (status, types, etc.) more sensibly.
     # Fill in missing parameters.
-    @props[:id] ||= uuidify(name)
     @props[:status] ||= 1
     @props[:statusStr] ||= 'Started'
     @props[:stripe] ||= 1
@@ -108,6 +123,31 @@ class FakeVolume
     @props[:redundancy] ||= 1
     @props[:type] ||= 2
     @props[:typeStr] ||= 'Replicate'
+  end
+
+  [:name, :id, :bricks].each { |key| define_method(key) { @props[key] } }
+
+  def peers
+    bricks.map { |brick| brick[:peer] }
+  end
+
+  def started?
+    @props[:status] == 1
+  end
+
+  def [](key)
+    @props[key]
+  end
+
+  def []=(key, value)
+    @props[key] = value
+  end
+
+  def short_xml(parent)
+    add_elems(parent.add_element('volume'), [
+        ['name', @props[:name]],
+        ['id', @props[:id]],
+      ])
   end
 
   def info_xml(parent)
@@ -127,7 +167,7 @@ class FakeVolume
         ['transport', @props[:transport].to_s],
         # TODO: Support xlators?
         ['xlators', []],
-        ['bricks', @bricks.map do |brick|
+        ['bricks', bricks.map do |brick|
             ['brick', [
                 brick[:name],           # Text element.
                 ['name', brick[:name]],
@@ -148,9 +188,15 @@ class FakeGluster
   def initialize
     @peers = []
     @volumes = []
+    @error = nil
+    @unreachable_peers = {}
   end
 
   # Manipulate and inspect state.
+
+  def set_error(opRet, opErrno=-1, opErrstr='')
+    @error = { :opRet => opRet, :opErrstr => opErrno, :opErrstr => opErrstr }
+  end
 
   def add_peer(hostname, peer_hash={})
     @peers << FakePeer.new(hostname, peer_hash)
@@ -162,11 +208,22 @@ class FakeGluster
   end
 
   def remove_peer(hostname)
+    old_count = @peers.size
     @peers.delete_if { |peer| peer.hostname == hostname }
+    old_count != @peers.size
+  end
+
+  def peer_unreachable(hostname, reason=nil)
+    reason = 'Probe returned with unknown errno 107' if reason.nil?
+    @unreachable_peers[hostname] = reason
+  end
+
+  def peer_reachable(hostname)
+    @unreachable_peers.delete(hostname)
   end
 
   def peer_hosts
-    @peers.map { |peer| peer.hostname }
+    @peers.map(&:hostname)
   end
 
   def add_volume(name, bricks=nil, volume_hash={})
@@ -178,6 +235,16 @@ class FakeGluster
     volumes.each { |volume| add_volume(volume) }
   end
 
+  def get_volume(name)
+    vols = @volumes.select { |vol| vol.name == name }
+    assert vols.size == 1, "Expected to find one volume, found #{vols.size}"
+    vols[0]
+  end
+
+  def volume_names
+    @volumes.map(&:name)
+  end
+
   # Pretend to be the cli.
 
   def gluster(*args)
@@ -185,46 +252,101 @@ class FakeGluster
       raise ArgumentError, "missing '#{arg}'" unless args.include? arg
       args.delete(arg)
     end
-    case args
-    when ['peer', 'status']
-      peer_status
-    when ->(a){ a.size == 3 and a.take(2) == ['peer', 'probe'] }
-      peer_probe(args[2])
-    when ->(a){ a.size == 3 and a.take(2) == ['peer', 'detach'] }
-      peer_detach(args[2])
-    when ['volume', 'info', 'all']
-      volume_info
-    else
-      raise ArgumentError, "I don't know how to handle #{args.inspect}"
-    end
+    return format_doc(make_cli_err(@error)) unless @error.nil?
+
+    # All commands have the form <noun> <verb> <*args>, so we can use this to
+    # avoid building a big dispatch table.
+    cmd_method = "cmd_#{args[0]}_#{args[1]}".to_sym
+    send(cmd_method, *args.drop(2).map(&:to_s))
   end
 
-  def peer_status
+  # peer commands
+
+  def cmd_peer_status
     elem = make_cli_elem('peerStatus')
     @peers.each { |peer| peer.status_xml(elem) }
     format_doc(elem)
   end
 
-  def peer_probe(peer)
-    # TODO: More comprehensive implementation, including failures.
-    add_peer(peer)
-    elem = make_cli_elem('output')
-    format_doc(elem)
+  def cmd_peer_probe(peer)
+    if @unreachable_peers.include? peer
+      format_doc(make_cli_err(
+          :opErrno => 107, :opErrstr => @unreachable_peers[peer]))
+    else
+      add_peer(peer)
+      format_doc(make_cli_elem('output'))
+    end
   end
 
-  def peer_detach(peer)
-    # TODO: More comprehensive implementation, including failures.
+  def cmd_peer_detach(peer)
     remove_peer(peer)
-    elem = make_cli_elem('output')
-    add_elems(elem, 'success')
-    format_doc(elem)
+    format_doc(add_elems(make_cli_elem('output'), 'success'))
   end
 
-  def volume_info
+  # volume commands
+
+  def cmd_volume_info(name)
+    assert name == 'all', 'single volume info not supported'
     elem = make_cli_elem('volInfo').add_element('volumes')
-    add_elem_text(elem, 'count', @volumes.size.to_s)
+    add_elems(elem, [['count', @volumes.size.to_s]])
     @volumes.each { |volume| volume.info_xml(elem) }
     format_doc(elem)
+  end
+
+  def cmd_volume_create(name, *args)
+    # The args must follow the sequence <name> [replica, etc.] <bricks> [force]
+    # which conveniently makes them easy to parse here.
+    params = {}
+    bricks = []
+    if args[-1] == 'force'
+      params[:force] = true
+      args.delete_at(-1)
+    end
+    while !args.empty?
+      case args[0]
+      when 'replica'
+        params[:replica] = args[1]
+        args = args.drop(2)
+      else
+        bricks = args
+        args = []
+      end
+    end
+    params[:status] = 0
+    params[:statusStr] = 'Created'
+    volume = FakeVolume.new(name, bricks, params)
+    all_peers = peer_hosts + [Facter.value(:fqdn)]
+    volume.peers.each do |peer|
+      return format_doc(make_cli_err(
+          :opErrno => 30800,
+          :opErrstr => "Host #{peer} is not in 'Peer in Cluster' state",
+      )) unless all_peers.include? peer
+    end
+    @volumes << volume
+    format_doc(volume.short_xml(make_cli_elem('volCreate')))
+  end
+
+  def cmd_volume_delete(name)
+    volume = get_volume(name)
+    assert !volume.started?, "volume started (status: #{volume[:status]})"
+    @volumes.delete(volume)
+    format_doc(volume.short_xml(make_cli_elem('volDelete')))
+  end
+
+  def cmd_volume_start(name)
+    volume = get_volume(name)
+    assert !volume.started?, "volume started (status: #{volume[:status]})"
+    volume[:status] = 1
+    volume[:statusStr] = 'Started'
+    format_doc(volume.short_xml(make_cli_elem('volStart')))
+  end
+
+  def cmd_volume_stop(name)
+    volume = get_volume(name)
+    assert volume.started?, "volume not started (status: #{volume[:status]})"
+    volume[:status] = 2
+    volume[:statusStr] = 'Stopped'
+    format_doc(volume.short_xml(make_cli_elem('volStop')))
   end
 
   # Utility stuff to make life a little easier.

@@ -28,7 +28,8 @@ Puppet::Type.newtype(:gluster_volume) do
     end
     defaultto(:present)
 
-    # We don't want to just use `exists?` here.
+    # We can't just use the default `exists?` check here, because we don't have
+    # a binary value.
     def retrieve
       provider.get(:ensure)
     end
@@ -67,8 +68,6 @@ Puppet::Type.newtype(:gluster_volume) do
   end
 
   autorequire(:gluster_peer) do
-    peers = value(:bricks).map { |brick| brick.split(":")[0] }.uniq
-    info("peers: #{peers}")
-    peers
+    value(:bricks).map { |brick| brick.split(":")[0] }.uniq
   end
 end

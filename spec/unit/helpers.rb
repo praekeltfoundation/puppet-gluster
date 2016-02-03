@@ -6,3 +6,11 @@ def props(providers)
     providers.map { |p| props(p) }
   end
 end
+
+def res_hash(resources)
+  Hash[resources.map { |r| [r.name, r] }]
+end
+
+def res_providers(resources)
+  resources.map { |r| r.provider && r.provider.name }
+end

@@ -21,15 +21,15 @@ describe Puppet::Type.type(:gluster_volume), :unit => true do
         end
       end
 
-      describe "namevar validation" do
-        it "should have :name as its namevar" do
+      describe 'namevar validation' do
+        it 'should have :name as its namevar' do
           expect(described_class.key_attributes).to eq([:name])
         end
       end
 
       describe 'when validating attribute values' do
         describe 'name' do
-          it "should accept a string" do
+          it 'should accept a string' do
             expect(
               described_class.new(:name => 'data1')
             ).to satisfy { |v| v[:name] == 'data1' }
@@ -45,7 +45,7 @@ describe Puppet::Type.type(:gluster_volume), :unit => true do
             end
           end
 
-          it "should not accept other values" do
+          it 'should not accept other values' do
             expect {
               described_class.new(:name => 'data1', :force => 'Yoda')
             }.to raise_error(Puppet::Error, /Invalid value/)
@@ -53,13 +53,13 @@ describe Puppet::Type.type(:gluster_volume), :unit => true do
         end
 
         describe 'replica' do
-          it "should accept an empty value" do
+          it 'should accept an empty value' do
             expect(
               described_class.new(:name => 'data1')
             ).to satisfy { |v| v[:replica].nil? }
           end
 
-          it "should accept an integer >= 2" do
+          it 'should accept an integer >= 2' do
             expect(
               described_class.new(:name => 'data1', :replica => 2)
             ).to satisfy { |v| v[:replica] == 2 }
@@ -71,13 +71,13 @@ describe Puppet::Type.type(:gluster_volume), :unit => true do
             ).to satisfy { |v| v[:replica] == 17 }
           end
 
-          it "should not accept an integer < 2" do
+          it 'should not accept an integer < 2' do
             expect {
               described_class.new(:name => 'data1', :replica => 1)
             }.to raise_error(Puppet::Error, /must be an integer >= 2/)
           end
 
-          it "should not accept an arbitrary string" do
+          it 'should not accept an arbitrary string' do
             expect {
               described_class.new(:name => 'data1', :replica => 'seventeen')
             }.to raise_error(Puppet::Error, /must be an integer >= 2/)
@@ -85,25 +85,25 @@ describe Puppet::Type.type(:gluster_volume), :unit => true do
         end
 
         describe 'bricks' do
-          it "should default to an empty array" do
+          it 'should default to an empty array' do
             expect(
               described_class.new(:name => 'data1')
             ).to satisfy { |v| v[:bricks] == [] }
           end
 
-          it "should accept a single string" do
+          it 'should accept a single string' do
             expect(
               described_class.new(:name => 'data1', :bricks => 'p1:b1')
             ).to satisfy { |v| v[:bricks] == ['p1:b1'] }
           end
 
-          it "should accept an array containing a single string" do
+          it 'should accept an array containing a single string' do
             expect(
               described_class.new(:name => 'data1', :bricks => ['p1:b1'])
             ).to satisfy { |v| v[:bricks] == ['p1:b1'] }
           end
 
-          it "should accept an array containing many strings" do
+          it 'should accept an array containing many strings' do
             expect(
               described_class.new(
               :name => 'data1', :bricks => ['p1:b1', 'p2:b1'])
@@ -121,7 +121,7 @@ describe Puppet::Type.type(:gluster_volume), :unit => true do
             end
           end
 
-          it "should not accept other values" do
+          it 'should not accept other values' do
             expect { described_class.new(
               :name => 'foo',
               :ensure => 'unhappy',
@@ -145,7 +145,7 @@ describe Puppet::Type.type(:gluster_volume), :unit => true do
             @cat.create_resource(:service, :title => 'glusterfs-server')
             expect(
               vol().autorequire(@cat).map { |r| r.source.to_s }
-            ).to eq(["Service[glusterfs-server]"])
+            ).to eq(['Service[glusterfs-server]'])
           end
 
           it 'should not require Service[glusterfs-server] unless declared' do
@@ -160,9 +160,58 @@ describe Puppet::Type.type(:gluster_volume), :unit => true do
             @cat.create_resource(:gluster_peer, :title => 'p4')
             expect(vol('p1:/b', 'p2:/b', 'p3:/b').autorequire(@cat).map { |r|
                 r.source.to_s
-              }).to eq(["Gluster_peer[p1]", "Gluster_peer[p2]"])
+              }).to eq(['Gluster_peer[p1]', 'Gluster_peer[p2]'])
           end
         end
+
+        describe 'ensure behaviour' do
+          before :each do
+            # This needs to be a subclass of Puppet::Provider, so we can't use
+            # a double.
+            class FakeProv < Puppet::Provider
+            end
+            @prov = FakeProv.new
+            @res = described_class.new(:name => 'foo')
+            @res.provider = @prov
+          end
+
+          it 'should retrieve the correct state' do
+            allow(@prov).to receive(:get).with(:ensure).and_return(:present)
+            expect(@res.property(:ensure).retrieve).to eq(:present)
+            allow(@prov).to receive(:get).with(:ensure).and_return(:absent)
+            expect(@res.property(:ensure).retrieve).to eq(:absent)
+            allow(@prov).to receive(:get).with(:ensure).and_return(:stopped)
+            expect(@res.property(:ensure).retrieve).to eq(:stopped)
+          end
+
+          it 'should create when necessary' do
+            @res[:ensure] = :present
+            expect(@prov).to receive(:create).twice
+            allow(@prov).to receive(:get).with(:ensure).and_return(:absent)
+            expect { @res.property(:ensure).sync }.to_not raise_error
+            allow(@prov).to receive(:get).with(:ensure).and_return(:stopped)
+            expect { @res.property(:ensure).sync }.to_not raise_error
+          end
+
+          it 'should destroy when necessary' do
+            @res[:ensure] = :absent
+            expect(@prov).to receive(:destroy).twice
+            allow(@prov).to receive(:get).with(:ensure).and_return(:present)
+            expect { @res.property(:ensure).sync }.to_not raise_error
+            allow(@prov).to receive(:get).with(:ensure).and_return(:stopped)
+            expect { @res.property(:ensure).sync }.to_not raise_error
+          end
+
+          it 'should ensure_stopped when necessary' do
+            @res[:ensure] = :stopped
+            expect(@prov).to receive(:ensure_stopped).twice
+            allow(@prov).to receive(:get).with(:ensure).and_return(:present)
+            expect { @res.property(:ensure).sync }.to_not raise_error
+            allow(@prov).to receive(:get).with(:ensure).and_return(:absent)
+            expect { @res.property(:ensure).sync }.to_not raise_error
+          end
+        end
+
       end
     end
   end
