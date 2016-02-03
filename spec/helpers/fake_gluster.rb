@@ -14,7 +14,7 @@ module GlusterXML
   def make_cli_err(ops={})
     ops[:opRet] ||= -1
     ops[:opErrno] ||= 0
-    ops[:errSt] ||= 'error'
+    ops[:opErrstr] ||= 'error'
     make_cli_root(ops[:opRet], ops[:opErrno], ops[:opErrstr])
   end
 

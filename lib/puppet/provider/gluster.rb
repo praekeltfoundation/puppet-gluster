@@ -29,7 +29,7 @@ module GlusterCmdHelpers
   def gluster_cmd(*args)
     output = gluster('--xml', '--mode=script', *args)
     doc = REXML::Document.new(output)
-    if opRet = cli_text(doc, 'opRet') != '0'
+    if (opRet = cli_text(doc, 'opRet')) != '0'
       raise GlusterCmdError.new(
         opRet, cli_text(doc, 'opErrno'), cli_text(doc, 'opErrstr'))
     end
