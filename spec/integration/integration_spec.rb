@@ -218,10 +218,8 @@ describe 'integration', :integration => true do
           }
           MANIFEST
           expect(trx.any_failed?).to be_nil
-          expect(trx.changed?.map(&:to_s).sort).to eq([
-              'Gluster_peer[gfs1.local]',
-              'Gluster_volume[vol1]',
-            ])
+          expect(trx.changed?.map(&:to_s)).to contain_exactly(
+            'Gluster_peer[gfs1.local]', 'Gluster_volume[vol1]')
           expect(@fake_gluster.volume_names).to eq(['vol1'])
           expect(@fake_gluster.get_volume('vol1').started?).to eq(true)
         end
@@ -235,15 +233,13 @@ describe 'integration', :integration => true do
           }
           MANIFEST
           expect(trx.any_failed?).to be_nil
-          expect(trx.changed?.map(&:to_s).sort).to eq([
-              'Gluster_peer[gfs1.local]',
-              'Gluster_volume[vol1]',
-            ])
+          expect(trx.changed?.map(&:to_s)).to contain_exactly(
+            'Gluster_peer[gfs1.local]', 'Gluster_volume[vol1]')
           expect(@fake_gluster.volume_names).to eq(['vol1'])
           vol = @fake_gluster.get_volume('vol1')
           expect(vol.started?).to eq(true)
-          expect(vol.bricks.map { |b| b[:name] }.sort).to eq(
-            ["#{Facter.value(:fqdn)}:/b1/v1", 'gfs1.local:/b1/v1'].sort)
+          expect(vol.bricks.map { |b| b[:name] }).to contain_exactly(
+            "#{Facter.value(:fqdn)}:/b1/v1", 'gfs1.local:/b1/v1')
           expect(vol[:replica]).to eq(1)
         end
 
@@ -257,15 +253,13 @@ describe 'integration', :integration => true do
           }
           MANIFEST
           expect(trx.any_failed?).to be_nil
-          expect(trx.changed?.map(&:to_s).sort).to eq([
-              'Gluster_peer[gfs1.local]',
-              'Gluster_volume[vol1]',
-            ])
+          expect(trx.changed?.map(&:to_s)).to contain_exactly(
+            'Gluster_peer[gfs1.local]', 'Gluster_volume[vol1]')
           expect(@fake_gluster.volume_names).to eq(['vol1'])
           vol = @fake_gluster.get_volume('vol1')
           expect(vol.started?).to eq(true)
-          expect(vol.bricks.map { |b| b[:name] }.sort).to eq(
-            ["#{Facter.value(:fqdn)}:/b1/v1", 'gfs1.local:/b1/v1'].sort)
+          expect(vol.bricks.map { |b| b[:name] }).to contain_exactly(
+            "#{Facter.value(:fqdn)}:/b1/v1", 'gfs1.local:/b1/v1')
           expect(vol[:replica]).to eq('2')
         end
 
