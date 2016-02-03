@@ -33,6 +33,23 @@ Puppet::Type.newtype(:gluster_volume) do
     def retrieve
       provider.get(:ensure)
     end
+
+    # We want to ignore volumes with missing peers here.
+    def property_matches?(current, desired)
+      if current != desired
+        missing_peers = provider.missing_peers
+        unless missing_peers.empty?
+          info([
+              "Ignoring '#{resource[:name]}' (pretending it's #{desired})",
+              'because the following peers are missing:',
+              missing_peers.join(', '),
+            ].join(' '))
+          return true
+        end
+      end
+      # We're not pretending, so invoke the original method.
+      super
+    end
   end
 
   # TODO: More params, etc.

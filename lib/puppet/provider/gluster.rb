@@ -60,17 +60,6 @@ class Puppet::Provider::Gluster < Puppet::Provider
     parse_peer_status(gluster_cmd('peer', 'status'))
   end
 
-  def self.peers_present(required_peers)
-    peers = all_peers
-    missing_peers = required_peers - peers
-    if (required_peers - all_peers).empty?
-      true
-    else
-      debug("Missing required peers: #{missing_peers.join(', ')}")
-      false
-    end
-  end
-
   # Volume information
 
   def self.parse_volume_info(doc)

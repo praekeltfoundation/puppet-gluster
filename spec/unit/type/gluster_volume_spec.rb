@@ -171,7 +171,7 @@ describe Puppet::Type.type(:gluster_volume), :unit => true do
             class FakeProv < Puppet::Provider
             end
             @prov = FakeProv.new
-            @res = described_class.new(:name => 'foo')
+            @res = described_class.new(:name => 'volname')
             @res.provider = @prov
           end
 
@@ -209,6 +209,22 @@ describe Puppet::Type.type(:gluster_volume), :unit => true do
             expect { @res.property(:ensure).sync }.to_not raise_error
             allow(@prov).to receive(:get).with(:ensure).and_return(:absent)
             expect { @res.property(:ensure).sync }.to_not raise_error
+          end
+
+          it 'should not create if a peer is missing' do
+            @res[:bricks] = [1, 2, 3].map { |n| "gfs#{n}.local:/b1/v1" }
+            allow(@prov).to receive(:missing_peers).and_return(
+              ['gfs1.local', 'gfs3.local'])
+            expect {
+              expect(@res.property(:ensure).insync? :absent).to eq(true)
+            }.to have_logged(
+              # All of these are the same line, but it's simpler to match them
+              # separately.
+              [/Ignoring.*volname.*pretending it's present/, :info],
+              [/gfs1\.local/, :info],
+              [/gfs3\.local/, :info],
+            )
+            expect(@res.property(:ensure).insync? :absent).to eq(true)
           end
         end
 

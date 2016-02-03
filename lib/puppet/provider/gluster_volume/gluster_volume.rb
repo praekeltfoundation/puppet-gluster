@@ -25,6 +25,13 @@ Puppet::Type.type(:gluster_volume).provide(
     end
   end
 
+  def missing_peers
+    peers = self.class.all_peers
+    [:hostname, :fqdn, :ipaddress].each { |f| peers << Facter.value(f) }
+    required_peers = resource[:bricks].map { |brick| brick.split(':')[0] }
+    required_peers - peers
+  end
+
   def create_volume
     info("Creating volume #{resource[:name]} (#{@property_hash[:ensure]})")
     args = []
