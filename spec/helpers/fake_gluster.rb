@@ -190,12 +190,17 @@ class FakeGluster
     @volumes = []
     @error = nil
     @unreachable_peers = {}
+    @local_addresses = [Facter.value(:fqdn)]
   end
 
   # Manipulate and inspect state.
 
   def set_error(opRet, opErrno=-1, opErrstr='')
     @error = { :opRet => opRet, :opErrstr => opErrno, :opErrstr => opErrstr }
+  end
+
+  def add_local_alias(address)
+    @local_addresses << address
   end
 
   def add_peer(hostname, peer_hash={})
@@ -315,7 +320,7 @@ class FakeGluster
     params[:status] = 0
     params[:statusStr] = 'Created'
     volume = FakeVolume.new(name, bricks, params)
-    all_peers = peer_hosts + [Facter.value(:fqdn)]
+    all_peers = peer_hosts + @local_addresses
     volume.peers.each do |peer|
       return format_doc(make_cli_err(
           :opErrno => 30800,

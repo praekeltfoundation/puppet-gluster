@@ -26,10 +26,9 @@ Puppet::Type.type(:gluster_volume).provide(
   end
 
   def missing_peers
-    # First get the hostnames of all the remote peers we know about.
-    peers = self.class.all_peers
-    # Then add our own addresses so we know the local machine isn't missing.
-    [:hostname, :fqdn, :ipaddress].each { |f| peers << Facter.value(f) }
+    # We know about a peer if the cluster knows about it or if it's a local
+    # alias.
+    peers = self.class.all_peers + resource[:local_peer_aliases]
     # Extract and dedupe peer addresses from the volume bricks.
     required_peers = resource[:bricks].map { |brick| brick.split(':')[0] }.uniq
     # Return a list of all brick peers we don't know about.

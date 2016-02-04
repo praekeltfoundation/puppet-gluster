@@ -288,6 +288,34 @@ describe 'integration', :integration => true do
           expect(@fake_gluster.get_volume('vol1').started?).to eq(true)
         end
 
+        it 'should not add a volume with missing peers' do
+          expect(@fake_gluster.volume_names).to eq([])
+          trx = apply_node_manifest(<<-'MANIFEST')
+          gluster_volume { 'vol1':
+            bricks => ["${fqdn}:/b1/v1", 'gfs1.local:/b1/v1'],
+          }
+          MANIFEST
+          expect(trx.any_failed?).to be_nil
+          expect(trx.changed?.map(&:to_s)).to eq([])
+          expect(@fake_gluster.volume_names).to eq([])
+        end
+
+        it 'should add a volume with a local peer alias' do
+          @fake_gluster.add_local_alias('alias.local')
+          expect(@fake_gluster.peer_hosts).to eq([])
+          expect(@fake_gluster.volume_names).to eq([])
+          trx = apply_node_manifest(<<-'MANIFEST')
+          gluster_volume { 'vol1':
+            bricks => ['alias.local:/b1/v1'],
+            local_peer_aliases => ['alias.local'],
+          }
+          MANIFEST
+          expect(trx.any_failed?).to be_nil
+          expect(trx.changed?.map(&:to_s)).to eq(['Gluster_volume[vol1]'])
+          expect(@fake_gluster.volume_names).to eq(['vol1'])
+          expect(@fake_gluster.get_volume('vol1').started?).to eq(true)
+        end
+
         it 'should start a stopped volume' do
           @fake_gluster.add_volume(
             'vol1', ["#{Facter.value(:fqdn)}:/b1/v1"],
