@@ -57,28 +57,28 @@ describe Puppet::Type.type(:gluster_peer), :unit => true do
           # really hard to get rid of the facts.
 
           it "should include default values" do
-            default = get_facts(:fqdn, :hostname, :ipaddress, :ipaddress_lo)
+            default = get_facts(:fqdn, :hostname, :ipaddress)
             expect(
               described_class.new(:peer => 'foo')
             ).to satisfy { |v| v[:local_peer_aliases] == default }
           end
 
           it "should accept a single string" do
-            default = get_facts(:fqdn, :hostname, :ipaddress, :ipaddress_lo)
+            default = get_facts(:fqdn, :hostname, :ipaddress)
             expect(described_class.new(
                 :peer => 'foo', :local_peer_aliases => 'foo')
             ).to satisfy { |v| v[:local_peer_aliases] == ['foo'] + default }
           end
 
           it "should accept an array containing a single string" do
-            default = get_facts(:fqdn, :hostname, :ipaddress, :ipaddress_lo)
+            default = get_facts(:fqdn, :hostname, :ipaddress)
             expect(described_class.new(
                 :peer => 'foo', :local_peer_aliases => ['foo'])
             ).to satisfy { |v| v[:local_peer_aliases] == ['foo'] + default }
           end
 
           it "should accept an array containing many strings" do
-            default = get_facts(:fqdn, :hostname, :ipaddress, :ipaddress_lo)
+            default = get_facts(:fqdn, :hostname, :ipaddress)
             expect(described_class.new(
                 :peer => 'foo', :local_peer_aliases => ['a', 'b'])
             ).to satisfy { |v| v[:local_peer_aliases] == ['a', 'b'] + default }
@@ -112,10 +112,10 @@ describe Puppet::Type.type(:gluster_peer), :unit => true do
             expect(rtype.parameter(:ensure).insync? :present).to eq(true)
           end
 
-          it 'should ignore localhost' do
+          it 'should ignore the local host' do
             # We ignore peers by always pretending they're in sync.
             rtype = described_class.new(
-              :peer => '127.0.0.1',
+              :peer => Facter.value(:fqdn),
               :ensure => :present)
             expect(rtype.parameter(:ensure).insync? :absent).to eq(true)
             expect(rtype.parameter(:ensure).insync? :present).to eq(true)
