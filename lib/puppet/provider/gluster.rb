@@ -1,11 +1,17 @@
-module XPathHelpers
+class GlusterCmdError < Puppet::ExecutionFailure
+  attr_reader :opRet, :opErrno, :opErrstr
+  def initialize(opRet, opErrno, opErrstr)
+    @opRet = opRet
+    @opErrno = opErrno
+    @opErrstr = opErrstr
+    super("Execution failed (#{opRet}) #{opErrno}: #{opErrstr}")
+  end
+end
+
+module GlusterCmdHelpers
   def value_if_text(node)
-    case node.node_type
-    when :text
-      node.value
-    else
-      node
-    end
+    return node.value if node.node_type == :text
+    node
   end
 
   def xpath_match(node, query)
@@ -15,7 +21,22 @@ module XPathHelpers
   def xpath_first(node, query)
     value_if_text(REXML::XPath.first(node, query))
   end
+
+  def cli_text(doc, path)
+    xpath_first(doc, "/cliOutput/#{path}/text()")
+  end
+
+  def gluster_cmd(*args)
+    output = gluster('--xml', '--mode=script', *args)
+    doc = REXML::Document.new(output)
+    if (opRet = cli_text(doc, 'opRet')) != '0'
+      raise GlusterCmdError.new(
+        opRet, cli_text(doc, 'opErrno'), cli_text(doc, 'opErrstr'))
+    end
+    doc
+  end
 end
+
 
 class Puppet::Provider::Gluster < Puppet::Provider
 
@@ -26,43 +47,22 @@ class Puppet::Provider::Gluster < Puppet::Provider
   # end
 
   # We want these to be both class and instance methods.
-  extend XPathHelpers
-  include XPathHelpers
+  extend GlusterCmdHelpers
+  include GlusterCmdHelpers
 
   # Peer information
 
-  def self.parse_peer_status(output)
-    doc = REXML::Document.new(output)
+  def self.parse_peer_status(doc)
     xpath_match(doc, '/cliOutput/peerStatus/peer/hostname/text()')
-  end
-
-  def self.gluster_cmd(*args)
-    gluster('--xml', '--mode=script', *args)
-  end
-
-  def gluster_cmd(*args)
-    gluster('--xml', '--mode=script', *args)
   end
 
   def self.all_peers
     parse_peer_status(gluster_cmd('peer', 'status'))
   end
 
-  def self.peers_present(required_peers)
-    peers = all_peers
-    missing_peers = required_peers - peers
-    if (required_peers - all_peers).empty?
-      true
-    else
-      debug("Missing required peers: #{missing_peers.join(', ')}")
-      false
-    end
-  end
-
   # Volume information
 
-  def self.parse_volume_info(output)
-    doc = REXML::Document.new(output)
+  def self.parse_volume_info(doc)
     xpath_match(doc, '/cliOutput/volInfo/volumes/volume').map do |vol|
       extract_volume_info(vol)
     end
@@ -102,8 +102,7 @@ class Puppet::Provider::Gluster < Puppet::Provider
   end
 
   def self.all_volumes
-    output = gluster_cmd('volume', 'info', 'all')
-    parse_volume_info(output)
+    parse_volume_info(gluster_cmd('volume', 'info', 'all'))
   end
 
   def get_volume_info(name)

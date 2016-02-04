@@ -33,8 +33,8 @@ Puppet::Type.newtype(:gluster_peer) do
     defaultto []
 
     munge do |val|
-      facts = ['fqdn', 'hostname', 'ipaddress', 'ipaddress_lo']
-      Array(val) + facts.map { |n| Facter[n] }.compact.map { |f| f.value }
+      facts = [:fqdn, :hostname, :ipaddress, :ipaddress_lo]
+      Array(val) + facts.map { |f| Facter.value(f) }.compact
     end
   end
 

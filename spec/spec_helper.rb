@@ -17,3 +17,4 @@ end
 # These helpers are useful to have everywhere.
 require 'helpers/fake_facts'
 require 'helpers/fake_gluster'
+require 'helpers/log_matcher'

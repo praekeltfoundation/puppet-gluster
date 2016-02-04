@@ -25,6 +25,17 @@ Puppet::Type.type(:gluster_volume).provide(
     end
   end
 
+  def missing_peers
+    # First get the hostnames of all the remote peers we know about.
+    peers = self.class.all_peers
+    # Then add our own addresses so we know the local machine isn't missing.
+    [:hostname, :fqdn, :ipaddress].each { |f| peers << Facter.value(f) }
+    # Extract and dedupe peer addresses from the volume bricks.
+    required_peers = resource[:bricks].map { |brick| brick.split(':')[0] }.uniq
+    # Return a list of all brick peers we don't know about.
+    required_peers - peers
+  end
+
   def create_volume
     info("Creating volume #{resource[:name]} (#{@property_hash[:ensure]})")
     args = []
