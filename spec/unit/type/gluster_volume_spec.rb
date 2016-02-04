@@ -30,9 +30,7 @@ describe Puppet::Type.type(:gluster_volume), :unit => true do
       describe 'when validating attribute values' do
         describe 'name' do
           it 'should accept a string' do
-            expect(
-              described_class.new(:name => 'data1')
-            ).to satisfy { |v| v[:name] == 'data1' }
+            expect(described_class.new(:name => 'data1')[:name]).to eq('data1')
           end
         end
 
@@ -54,21 +52,19 @@ describe Puppet::Type.type(:gluster_volume), :unit => true do
 
         describe 'replica' do
           it 'should accept an empty value' do
-            expect(
-              described_class.new(:name => 'data1')
-            ).to satisfy { |v| v[:replica].nil? }
+            expect(described_class.new(:name => 'data1')[:replica]).to be_nil
           end
 
           it 'should accept an integer >= 2' do
             expect(
-              described_class.new(:name => 'data1', :replica => 2)
-            ).to satisfy { |v| v[:replica] == 2 }
+              described_class.new(:name => 'data1', :replica => 2)[:replica]
+            ).to eq(2)
             expect(
-              described_class.new(:name => 'data1', :replica => '2')
-            ).to satisfy { |v| v[:replica] == 2 }
+              described_class.new(:name => 'data1', :replica => '2')[:replica]
+            ).to eq(2)
             expect(
-              described_class.new(:name => 'data1', :replica => '17')
-            ).to satisfy { |v| v[:replica] == 17 }
+              described_class.new(:name => 'data1', :replica => '17')[:replica]
+            ).to eq(17)
           end
 
           it 'should not accept an integer < 2' do
@@ -86,28 +82,25 @@ describe Puppet::Type.type(:gluster_volume), :unit => true do
 
         describe 'bricks' do
           it 'should default to an empty array' do
-            expect(
-              described_class.new(:name => 'data1')
-            ).to satisfy { |v| v[:bricks] == [] }
+            expect(described_class.new(:name => 'data1')[:bricks]).to eq([])
           end
 
           it 'should accept a single string' do
-            expect(
-              described_class.new(:name => 'data1', :bricks => 'p1:b1')
-            ).to satisfy { |v| v[:bricks] == ['p1:b1'] }
+            expect(described_class.new(
+                :name => 'data1', :bricks => 'p1:b1')[:bricks]
+            ).to eq(['p1:b1'])
           end
 
           it 'should accept an array containing a single string' do
-            expect(
-              described_class.new(:name => 'data1', :bricks => ['p1:b1'])
-            ).to satisfy { |v| v[:bricks] == ['p1:b1'] }
+            expect(described_class.new(
+                :name => 'data1', :bricks => ['p1:b1'])[:bricks]
+            ).to eq(['p1:b1'])
           end
 
           it 'should accept an array containing many strings' do
-            expect(
-              described_class.new(
-              :name => 'data1', :bricks => ['p1:b1', 'p2:b1'])
-            ).to satisfy { |v| v[:bricks] == ['p1:b1', 'p2:b1'] }
+            expect(described_class.new(
+                :name => 'data1', :bricks => ['p1:b1', 'p2:b1'])[:bricks]
+            ).to eq(['p1:b1', 'p2:b1'])
           end
         end
 

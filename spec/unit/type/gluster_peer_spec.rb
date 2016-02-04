@@ -7,11 +7,6 @@ describe Puppet::Type.type(:gluster_peer), :unit => true do
         stub_facts(facts)
       end
 
-      # This uses `define_method` so that `facts` is in scope.
-      define_method(:get_facts) do |*names|
-        names.map { |name| facts[name] }
-      end
-
       describe 'when validating attributes' do
         [ :peer, :local_peer_aliases ].each do |param|
           it "should have a #{param} parameter" do
@@ -35,20 +30,20 @@ describe Puppet::Type.type(:gluster_peer), :unit => true do
         describe 'peer' do
           it "should accept a hostname" do
             expect(
-              described_class.new(:peer => 'gfs1')
-            ).to satisfy { |v| v[:peer] == 'gfs1' }
+              described_class.new(:peer => 'gfs1')[:peer]
+            ).to eq('gfs1')
           end
 
           it "should accept a fully qualified domain" do
             expect(
-              described_class.new(:peer => 'gfs2.example.com')
-            ).to satisfy { |v| v[:peer] == 'gfs2.example.com' }
+              described_class.new(:peer => 'gfs2.example.com')[:peer]
+            ).to eq('gfs2.example.com')
           end
 
           it "should accept an IP" do
             expect(
-              described_class.new(:peer => '1.2.3.4')
-            ).to satisfy { |v| v[:peer] == '1.2.3.4' }
+              described_class.new(:peer => '1.2.3.4')[:peer]
+            ).to eq('1.2.3.4')
           end
         end
 
@@ -56,32 +51,34 @@ describe Puppet::Type.type(:gluster_peer), :unit => true do
           # FIXME: This should test the missing fact handling, but it seems
           # really hard to get rid of the facts.
 
+          default_aliases = facts.values_at(:fqdn, :hostname, :ipaddress)
+
+          def lpa_of_new(args={})
+            described_class.new(args)[:local_peer_aliases]
+          end
+
           it "should include default values" do
-            default = get_facts(:fqdn, :hostname, :ipaddress)
             expect(
-              described_class.new(:peer => 'foo')
-            ).to satisfy { |v| v[:local_peer_aliases] == default }
+              lpa_of_new(:peer => 'foo')
+            ).to contain_exactly(*default_aliases)
           end
 
           it "should accept a single string" do
-            default = get_facts(:fqdn, :hostname, :ipaddress)
-            expect(described_class.new(
-                :peer => 'foo', :local_peer_aliases => 'foo')
-            ).to satisfy { |v| v[:local_peer_aliases] == ['foo'] + default }
+            expect(
+              lpa_of_new(:peer => 'foo', :local_peer_aliases => 'foo')
+            ).to contain_exactly('foo', *default_aliases)
           end
 
           it "should accept an array containing a single string" do
-            default = get_facts(:fqdn, :hostname, :ipaddress)
-            expect(described_class.new(
-                :peer => 'foo', :local_peer_aliases => ['foo'])
-            ).to satisfy { |v| v[:local_peer_aliases] == ['foo'] + default }
+            expect(
+              lpa_of_new(:peer => 'foo', :local_peer_aliases => ['foo'])
+            ).to contain_exactly('foo', *default_aliases)
           end
 
           it "should accept an array containing many strings" do
-            default = get_facts(:fqdn, :hostname, :ipaddress)
-            expect(described_class.new(
-                :peer => 'foo', :local_peer_aliases => ['a', 'b'])
-            ).to satisfy { |v| v[:local_peer_aliases] == ['a', 'b'] + default }
+            expect(
+              lpa_of_new(:peer => 'foo', :local_peer_aliases => ['a', 'b'])
+            ).to contain_exactly('a', 'b', *default_aliases)
           end
         end
 
