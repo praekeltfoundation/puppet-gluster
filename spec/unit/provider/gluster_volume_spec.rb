@@ -260,6 +260,19 @@ describe volume_type.provider(:gluster_volume), :unit => true do
           ).to contain_exactly('gfs1.local')
         end
 
+        it 'should treat any local peer aliases as present' do
+          expect(
+            described_class.new(@volume_type.new(
+                :name => 'vol1',
+                :local_peer_aliases => ['alias1.local', 'alias2.local'],
+                :bricks => [
+                  'gfs1.local:/b1/v1',
+                  'alias1.local:/b1/v1',
+                  'alias2.local:/b1/v1',
+                ])).missing_peers
+          ).to contain_exactly('gfs1.local')
+        end
+
         it 'should deduplicate peers with multiple bricks' do
           @fake_gluster.add_peers('gfs2.local')
           expect(

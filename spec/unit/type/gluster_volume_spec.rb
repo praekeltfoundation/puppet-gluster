@@ -8,13 +8,13 @@ describe Puppet::Type.type(:gluster_volume), :unit => true do
       end
 
       describe 'when validating attributes' do
-        [ :name, :force, :replica, :bricks ].each do |param|
+        [:name, :force, :replica, :bricks, :local_peer_aliases].each do |param|
           it "should have a #{param} parameter" do
             expect(described_class.attrtype(param)).to eq(:param)
           end
         end
 
-        [ :ensure ].each do |prop|
+        [:ensure].each do |prop|
           it "should have a #{prop} parameter" do
             expect(described_class.attrtype(prop)).to eq(:property)
           end
@@ -30,9 +30,7 @@ describe Puppet::Type.type(:gluster_volume), :unit => true do
       describe 'when validating attribute values' do
         describe 'name' do
           it 'should accept a string' do
-            expect(
-              described_class.new(:name => 'data1')
-            ).to satisfy { |v| v[:name] == 'data1' }
+            expect(described_class.new(:name => 'data1')[:name]).to eq('data1')
           end
         end
 
@@ -54,21 +52,19 @@ describe Puppet::Type.type(:gluster_volume), :unit => true do
 
         describe 'replica' do
           it 'should accept an empty value' do
-            expect(
-              described_class.new(:name => 'data1')
-            ).to satisfy { |v| v[:replica].nil? }
+            expect(described_class.new(:name => 'data1')[:replica]).to be_nil
           end
 
           it 'should accept an integer >= 2' do
             expect(
-              described_class.new(:name => 'data1', :replica => 2)
-            ).to satisfy { |v| v[:replica] == 2 }
+              described_class.new(:name => 'data1', :replica => 2)[:replica]
+            ).to eq(2)
             expect(
-              described_class.new(:name => 'data1', :replica => '2')
-            ).to satisfy { |v| v[:replica] == 2 }
+              described_class.new(:name => 'data1', :replica => '2')[:replica]
+            ).to eq(2)
             expect(
-              described_class.new(:name => 'data1', :replica => '17')
-            ).to satisfy { |v| v[:replica] == 17 }
+              described_class.new(:name => 'data1', :replica => '17')[:replica]
+            ).to eq(17)
           end
 
           it 'should not accept an integer < 2' do
@@ -86,28 +82,60 @@ describe Puppet::Type.type(:gluster_volume), :unit => true do
 
         describe 'bricks' do
           it 'should default to an empty array' do
-            expect(
-              described_class.new(:name => 'data1')
-            ).to satisfy { |v| v[:bricks] == [] }
+            expect(described_class.new(:name => 'data1')[:bricks]).to eq([])
           end
 
           it 'should accept a single string' do
-            expect(
-              described_class.new(:name => 'data1', :bricks => 'p1:b1')
-            ).to satisfy { |v| v[:bricks] == ['p1:b1'] }
+            expect(described_class.new(
+                :name => 'data1', :bricks => 'p1:b1')[:bricks]
+            ).to eq(['p1:b1'])
           end
 
           it 'should accept an array containing a single string' do
-            expect(
-              described_class.new(:name => 'data1', :bricks => ['p1:b1'])
-            ).to satisfy { |v| v[:bricks] == ['p1:b1'] }
+            expect(described_class.new(
+                :name => 'data1', :bricks => ['p1:b1'])[:bricks]
+            ).to eq(['p1:b1'])
           end
 
           it 'should accept an array containing many strings' do
+            expect(described_class.new(
+                :name => 'data1', :bricks => ['p1:b1', 'p2:b1'])[:bricks]
+            ).to eq(['p1:b1', 'p2:b1'])
+          end
+        end
+
+        describe 'local_peer_aliases' do
+          # FIXME: This should test the missing fact handling, but it seems
+          # really hard to get rid of the facts.
+
+          default_aliases = facts.values_at(:fqdn, :hostname, :ipaddress)
+
+          def lpa_of_new(args={})
+            described_class.new(args)[:local_peer_aliases]
+          end
+
+          it "should include default values" do
             expect(
-              described_class.new(
-              :name => 'data1', :bricks => ['p1:b1', 'p2:b1'])
-            ).to satisfy { |v| v[:bricks] == ['p1:b1', 'p2:b1'] }
+              lpa_of_new(:name => 'foo')
+            ).to contain_exactly(*default_aliases)
+          end
+
+          it "should accept a single string" do
+            expect(
+              lpa_of_new(:name => 'foo', :local_peer_aliases => 'foo')
+            ).to contain_exactly('foo', *default_aliases)
+          end
+
+          it "should accept an array containing a single string" do
+            expect(
+              lpa_of_new(:name => 'foo', :local_peer_aliases => ['foo'])
+            ).to contain_exactly('foo', *default_aliases)
+          end
+
+          it "should accept an array containing many strings" do
+            expect(
+              lpa_of_new(:name => 'foo', :local_peer_aliases => ['a', 'b'])
+            ).to contain_exactly('a', 'b', *default_aliases)
           end
         end
 
@@ -211,6 +239,13 @@ describe Puppet::Type.type(:gluster_volume), :unit => true do
             expect { @res.property(:ensure).sync }.to_not raise_error
           end
 
+          it 'should create if no peers are missing' do
+            @res[:bricks] = [1, 2, 3].map { |n| "gfs#{n}.local:/b1/v1" }
+            allow(@prov).to receive(:missing_peers).and_return([])
+            expect(@res.property(:ensure).insync? :absent).to eq(false)
+            expect(@res.property(:ensure).insync? :present).to eq(true)
+          end
+
           it 'should not create if a peer is missing' do
             @res[:bricks] = [1, 2, 3].map { |n| "gfs#{n}.local:/b1/v1" }
             allow(@prov).to receive(:missing_peers).and_return(
@@ -224,7 +259,7 @@ describe Puppet::Type.type(:gluster_volume), :unit => true do
               [/gfs1\.local/, :info],
               [/gfs3\.local/, :info],
             )
-            expect(@res.property(:ensure).insync? :absent).to eq(true)
+            expect(@res.property(:ensure).insync? :present).to eq(true)
           end
         end
 

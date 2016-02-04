@@ -80,6 +80,19 @@ Puppet::Type.newtype(:gluster_volume) do
     munge { |val| Array(val) }
   end
 
+  newparam(:local_peer_aliases, :array_matching => :all) do
+    desc([
+        'Other names for the current host.',
+        'Anything included here will be ignored when checking peers.',
+      ].join(' '))
+    defaultto []
+
+    munge do |val|
+      facts = [:fqdn, :hostname, :ipaddress]
+      Array(val) + facts.map { |f| Facter.value(f) }.compact
+    end
+  end
+
   autorequire(:service) do
     "glusterfs-server"
   end

@@ -7,18 +7,13 @@ describe Puppet::Type.type(:gluster_peer), :unit => true do
         stub_facts(facts)
       end
 
-      # This uses `define_method` so that `facts` is in scope.
-      define_method(:get_facts) do |*names|
-        names.map { |name| facts[name] }
-      end
-
       describe 'when validating attributes' do
-        [ :peer, :ignore_peers ].each do |param|
+        [:peer, :local_peer_aliases].each do |param|
           it "should have a #{param} parameter" do
             expect(described_class.attrtype(param)).to eq(:param)
           end
         end
-        [ :ensure ].each do |prop|
+        [:ensure].each do |prop|
           it "should have a #{prop} parameter" do
             expect(described_class.attrtype(prop)).to eq(:property)
           end
@@ -35,53 +30,55 @@ describe Puppet::Type.type(:gluster_peer), :unit => true do
         describe 'peer' do
           it "should accept a hostname" do
             expect(
-              described_class.new(:peer => 'gfs1')
-            ).to satisfy { |v| v[:peer] == 'gfs1' }
+              described_class.new(:peer => 'gfs1')[:peer]
+            ).to eq('gfs1')
           end
 
           it "should accept a fully qualified domain" do
             expect(
-              described_class.new(:peer => 'gfs2.example.com')
-            ).to satisfy { |v| v[:peer] == 'gfs2.example.com' }
+              described_class.new(:peer => 'gfs2.example.com')[:peer]
+            ).to eq('gfs2.example.com')
           end
 
           it "should accept an IP" do
             expect(
-              described_class.new(:peer => '1.2.3.4')
-            ).to satisfy { |v| v[:peer] == '1.2.3.4' }
+              described_class.new(:peer => '1.2.3.4')[:peer]
+            ).to eq('1.2.3.4')
           end
         end
 
-        describe 'ignore_peers' do
+        describe 'local_peer_aliases' do
           # FIXME: This should test the missing fact handling, but it seems
           # really hard to get rid of the facts.
 
+          default_aliases = facts.values_at(:fqdn, :hostname, :ipaddress)
+
+          def lpa_of_new(args={})
+            described_class.new(args)[:local_peer_aliases]
+          end
+
           it "should include default values" do
-            default = get_facts(:fqdn, :hostname, :ipaddress, :ipaddress_lo)
             expect(
-              described_class.new(:peer => 'foo')
-            ).to satisfy { |v| v[:ignore_peers] == default }
+              lpa_of_new(:peer => 'foo')
+            ).to contain_exactly(*default_aliases)
           end
 
           it "should accept a single string" do
-            default = get_facts(:fqdn, :hostname, :ipaddress, :ipaddress_lo)
             expect(
-              described_class.new(:peer => 'foo', :ignore_peers => 'foo')
-            ).to satisfy { |v| v[:ignore_peers] == ['foo'] + default }
+              lpa_of_new(:peer => 'foo', :local_peer_aliases => 'foo')
+            ).to contain_exactly('foo', *default_aliases)
           end
 
           it "should accept an array containing a single string" do
-            default = get_facts(:fqdn, :hostname, :ipaddress, :ipaddress_lo)
             expect(
-              described_class.new(:peer => 'foo', :ignore_peers => ['foo'])
-            ).to satisfy { |v| v[:ignore_peers] == ['foo'] + default }
+              lpa_of_new(:peer => 'foo', :local_peer_aliases => ['foo'])
+            ).to contain_exactly('foo', *default_aliases)
           end
 
           it "should accept an array containing many strings" do
-            default = get_facts(:fqdn, :hostname, :ipaddress, :ipaddress_lo)
             expect(
-              described_class.new(:peer => 'foo', :ignore_peers => ['a', 'b'])
-            ).to satisfy { |v| v[:ignore_peers] == ['a', 'b'] + default }
+              lpa_of_new(:peer => 'foo', :local_peer_aliases => ['a', 'b'])
+            ).to contain_exactly('a', 'b', *default_aliases)
           end
         end
 
@@ -103,7 +100,7 @@ describe Puppet::Type.type(:gluster_peer), :unit => true do
           end
         end
 
-        describe 'ignoring peers' do
+        describe 'local peer aliases' do
           it 'should not ignore arbitrary peers' do
             rtype = described_class.new(
               :peer => 'peer.example.com',
@@ -112,21 +109,21 @@ describe Puppet::Type.type(:gluster_peer), :unit => true do
             expect(rtype.parameter(:ensure).insync? :present).to eq(true)
           end
 
-          it 'should ignore localhost' do
+          it 'should ignore the local host' do
             # We ignore peers by always pretending they're in sync.
             rtype = described_class.new(
-              :peer => '127.0.0.1',
+              :peer => Facter.value(:fqdn),
               :ensure => :present)
             expect(rtype.parameter(:ensure).insync? :absent).to eq(true)
             expect(rtype.parameter(:ensure).insync? :present).to eq(true)
           end
 
-          it 'should ignore ignored peers' do
+          it 'should ignore local peer aliases' do
             # We ignore peers by always pretending they're in sync.
             rtype = described_class.new(
               :peer => 'peer.example.com',
               :ensure => :present,
-              :ignore_peers => ['peer.example.com'])
+              :local_peer_aliases => ['peer.example.com'])
             expect(rtype.parameter(:ensure).insync? :absent).to eq(true)
             expect(rtype.parameter(:ensure).insync? :present).to eq(true)
           end
