@@ -259,6 +259,18 @@ describe volume_type.provider(:gluster_volume), :unit => true do
                 ])).missing_peers
           ).to contain_exactly('gfs1.local')
         end
+
+        it 'should deduplicate peers with multiple bricks' do
+          @fake_gluster.add_peers('gfs2.local')
+          expect(
+            described_class.new(@volume_type.new(:name => 'vol1', :bricks => [
+                  'gfs1.local:/b1/v1',
+                  'gfs2.local:/b1/v1',
+                  'gfs1.local:/b2/v1',
+                  'gfs2.local:/b2/v1',
+                ])).missing_peers
+          ).to contain_exactly('gfs1.local')
+        end
       end
 
       describe 'edge cases' do
