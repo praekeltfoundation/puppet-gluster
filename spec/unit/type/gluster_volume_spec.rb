@@ -239,6 +239,13 @@ describe Puppet::Type.type(:gluster_volume), :unit => true do
             expect { @res.property(:ensure).sync }.to_not raise_error
           end
 
+          it 'should create if no peers are missing' do
+            @res[:bricks] = [1, 2, 3].map { |n| "gfs#{n}.local:/b1/v1" }
+            allow(@prov).to receive(:missing_peers).and_return([])
+            expect(@res.property(:ensure).insync? :absent).to eq(false)
+            expect(@res.property(:ensure).insync? :present).to eq(true)
+          end
+
           it 'should not create if a peer is missing' do
             @res[:bricks] = [1, 2, 3].map { |n| "gfs#{n}.local:/b1/v1" }
             allow(@prov).to receive(:missing_peers).and_return(
@@ -252,7 +259,7 @@ describe Puppet::Type.type(:gluster_volume), :unit => true do
               [/gfs1\.local/, :info],
               [/gfs3\.local/, :info],
             )
-            expect(@res.property(:ensure).insync? :absent).to eq(true)
+            expect(@res.property(:ensure).insync? :present).to eq(true)
           end
         end
 
