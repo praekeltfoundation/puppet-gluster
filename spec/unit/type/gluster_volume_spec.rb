@@ -8,13 +8,13 @@ describe Puppet::Type.type(:gluster_volume), :unit => true do
       end
 
       describe 'when validating attributes' do
-        [ :name, :force, :replica, :bricks ].each do |param|
+        [:name, :force, :replica, :bricks, :local_peer_aliases].each do |param|
           it "should have a #{param} parameter" do
             expect(described_class.attrtype(param)).to eq(:param)
           end
         end
 
-        [ :ensure ].each do |prop|
+        [:ensure].each do |prop|
           it "should have a #{prop} parameter" do
             expect(described_class.attrtype(prop)).to eq(:property)
           end
@@ -101,6 +101,41 @@ describe Puppet::Type.type(:gluster_volume), :unit => true do
             expect(described_class.new(
                 :name => 'data1', :bricks => ['p1:b1', 'p2:b1'])[:bricks]
             ).to eq(['p1:b1', 'p2:b1'])
+          end
+        end
+
+        describe 'local_peer_aliases' do
+          # FIXME: This should test the missing fact handling, but it seems
+          # really hard to get rid of the facts.
+
+          default_aliases = facts.values_at(:fqdn, :hostname, :ipaddress)
+
+          def lpa_of_new(args={})
+            described_class.new(args)[:local_peer_aliases]
+          end
+
+          it "should include default values" do
+            expect(
+              lpa_of_new(:name => 'foo')
+            ).to contain_exactly(*default_aliases)
+          end
+
+          it "should accept a single string" do
+            expect(
+              lpa_of_new(:name => 'foo', :local_peer_aliases => 'foo')
+            ).to contain_exactly('foo', *default_aliases)
+          end
+
+          it "should accept an array containing a single string" do
+            expect(
+              lpa_of_new(:name => 'foo', :local_peer_aliases => ['foo'])
+            ).to contain_exactly('foo', *default_aliases)
+          end
+
+          it "should accept an array containing many strings" do
+            expect(
+              lpa_of_new(:name => 'foo', :local_peer_aliases => ['a', 'b'])
+            ).to contain_exactly('a', 'b', *default_aliases)
           end
         end
 

@@ -8,12 +8,12 @@ describe Puppet::Type.type(:gluster_peer), :unit => true do
       end
 
       describe 'when validating attributes' do
-        [ :peer, :local_peer_aliases ].each do |param|
+        [:peer, :local_peer_aliases].each do |param|
           it "should have a #{param} parameter" do
             expect(described_class.attrtype(param)).to eq(:param)
           end
         end
-        [ :ensure ].each do |prop|
+        [:ensure].each do |prop|
           it "should have a #{prop} parameter" do
             expect(described_class.attrtype(prop)).to eq(:property)
           end
