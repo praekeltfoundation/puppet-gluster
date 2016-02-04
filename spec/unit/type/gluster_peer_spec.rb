@@ -13,7 +13,7 @@ describe Puppet::Type.type(:gluster_peer), :unit => true do
       end
 
       describe 'when validating attributes' do
-        [ :peer, :ignore_peers ].each do |param|
+        [ :peer, :local_peer_aliases ].each do |param|
           it "should have a #{param} parameter" do
             expect(described_class.attrtype(param)).to eq(:param)
           end
@@ -52,7 +52,7 @@ describe Puppet::Type.type(:gluster_peer), :unit => true do
           end
         end
 
-        describe 'ignore_peers' do
+        describe 'local_peer_aliases' do
           # FIXME: This should test the missing fact handling, but it seems
           # really hard to get rid of the facts.
 
@@ -60,28 +60,28 @@ describe Puppet::Type.type(:gluster_peer), :unit => true do
             default = get_facts(:fqdn, :hostname, :ipaddress, :ipaddress_lo)
             expect(
               described_class.new(:peer => 'foo')
-            ).to satisfy { |v| v[:ignore_peers] == default }
+            ).to satisfy { |v| v[:local_peer_aliases] == default }
           end
 
           it "should accept a single string" do
             default = get_facts(:fqdn, :hostname, :ipaddress, :ipaddress_lo)
-            expect(
-              described_class.new(:peer => 'foo', :ignore_peers => 'foo')
-            ).to satisfy { |v| v[:ignore_peers] == ['foo'] + default }
+            expect(described_class.new(
+                :peer => 'foo', :local_peer_aliases => 'foo')
+            ).to satisfy { |v| v[:local_peer_aliases] == ['foo'] + default }
           end
 
           it "should accept an array containing a single string" do
             default = get_facts(:fqdn, :hostname, :ipaddress, :ipaddress_lo)
-            expect(
-              described_class.new(:peer => 'foo', :ignore_peers => ['foo'])
-            ).to satisfy { |v| v[:ignore_peers] == ['foo'] + default }
+            expect(described_class.new(
+                :peer => 'foo', :local_peer_aliases => ['foo'])
+            ).to satisfy { |v| v[:local_peer_aliases] == ['foo'] + default }
           end
 
           it "should accept an array containing many strings" do
             default = get_facts(:fqdn, :hostname, :ipaddress, :ipaddress_lo)
-            expect(
-              described_class.new(:peer => 'foo', :ignore_peers => ['a', 'b'])
-            ).to satisfy { |v| v[:ignore_peers] == ['a', 'b'] + default }
+            expect(described_class.new(
+                :peer => 'foo', :local_peer_aliases => ['a', 'b'])
+            ).to satisfy { |v| v[:local_peer_aliases] == ['a', 'b'] + default }
           end
         end
 
@@ -103,7 +103,7 @@ describe Puppet::Type.type(:gluster_peer), :unit => true do
           end
         end
 
-        describe 'ignoring peers' do
+        describe 'local peer aliases' do
           it 'should not ignore arbitrary peers' do
             rtype = described_class.new(
               :peer => 'peer.example.com',
@@ -121,12 +121,12 @@ describe Puppet::Type.type(:gluster_peer), :unit => true do
             expect(rtype.parameter(:ensure).insync? :present).to eq(true)
           end
 
-          it 'should ignore ignored peers' do
+          it 'should ignore local peer aliases' do
             # We ignore peers by always pretending they're in sync.
             rtype = described_class.new(
               :peer => 'peer.example.com',
               :ensure => :present,
-              :ignore_peers => ['peer.example.com'])
+              :local_peer_aliases => ['peer.example.com'])
             expect(rtype.parameter(:ensure).insync? :absent).to eq(true)
             expect(rtype.parameter(:ensure).insync? :present).to eq(true)
           end

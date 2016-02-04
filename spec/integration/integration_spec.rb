@@ -62,11 +62,11 @@ describe 'integration', :integration => true do
           expect(@fake_gluster.peer_hosts).to eq(['gfs1.local', 'gfs2.local'])
         end
 
-        it 'should ignore inappropriate peers' do
+        it 'should ignore local peer addresses' do
           expect(@fake_gluster.peer_hosts).to eq([])
           trx = apply_node_manifest(<<-'MANIFEST')
-          gluster_peer { ["$ipaddress", 'gfs1.local', 'badpeer.local']:
-            ignore_peers => ['badpeer.local'],
+          gluster_peer { ["$ipaddress", 'gfs1.local', 'hostalias.local']:
+            local_peer_aliases => ['hostalias.local'],
           }
           MANIFEST
           expect(trx.any_failed?).to be_nil

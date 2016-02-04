@@ -27,9 +27,11 @@ Puppet::Type.newtype(:gluster_peer) do
 
   newparam(:peer, :namevar => true)
 
-  newparam(:ignore_peers, :array_matching => :all) do
-    desc("Peer addresses to ignore. " +
-         "This should include anything that resolves to the current host.")
+  newparam(:local_peer_aliases, :array_matching => :all) do
+    desc([
+        'Other names for the current host.',
+        'Anything included here will be ignored when checking peers.',
+      ].join(' '))
     defaultto []
 
     munge do |val|
@@ -39,10 +41,10 @@ Puppet::Type.newtype(:gluster_peer) do
   end
 
   def ignore?
-    value(:ignore_peers).include? value(:peer)
+    value(:local_peer_aliases).include? value(:peer)
   end
 
   autorequire(:service) do
-    "glusterfs-server"
+    'glusterfs-server'
   end
 end
