@@ -98,4 +98,12 @@ Puppet::Type.newtype(:gluster_volume) do
   autorequire(:gluster_peer) do
     value(:bricks).map { |brick| brick.split(":")[0] }.uniq
   end
+  autorequire(:file) do
+    files = []
+    value(:bricks).each do |brick|
+      peer, dir = brick.split(":")
+      files << dir if value(:local_peer_aliases).include? peer
+    end
+    files.uniq
+  end
 end

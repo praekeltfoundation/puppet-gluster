@@ -192,6 +192,14 @@ describe Puppet::Type.type(:gluster_volume), :unit => true do
               autoreq_vol('p1:/b', 'p2:/b', 'p3:/b')
             ).to contain_exactly('Gluster_peer[p1]', 'Gluster_peer[p2]')
           end
+
+          it 'should require any local brick dirs that are declared' do
+            @cat.create_resource(:file, :title => '/b1', :ensure => 'directory')
+            @cat.create_resource(:file, :title => '/b2', :ensure => 'directory')
+            expect(
+              autoreq_vol("#{Facter.value(:fqdn)}:/b1", 'p2:/b2', 'p3:/b3')
+            ).to eq(['File[/b1]'])
+          end
         end
 
         describe 'ensure behaviour' do
