@@ -1,6 +1,6 @@
 {
   "name": "praekeltfoundation-gluster",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "author": "Jeremy Thurgood",
   "summary": "Basic module to manage Gluster",
   "license": "BSD-3-Clause",
