@@ -20,27 +20,27 @@ describe Puppet::Type.type(:gluster_peer), :unit => true do
         end
       end
 
-      describe "namevar validation" do
-        it "should have :peer as its namevar" do
+      describe 'namevar validation' do
+        it 'should have :peer as its namevar' do
           expect(described_class.key_attributes).to eq([:peer])
         end
       end
 
       describe 'when validating attribute values' do
         describe 'peer' do
-          it "should accept a hostname" do
+          it 'should accept a hostname' do
             expect(
               described_class.new(:peer => 'gfs1')[:peer]
             ).to eq('gfs1')
           end
 
-          it "should accept a fully qualified domain" do
+          it 'should accept a fully qualified domain' do
             expect(
               described_class.new(:peer => 'gfs2.example.com')[:peer]
             ).to eq('gfs2.example.com')
           end
 
-          it "should accept an IP" do
+          it 'should accept an IP' do
             expect(
               described_class.new(:peer => '1.2.3.4')[:peer]
             ).to eq('1.2.3.4')
@@ -57,25 +57,25 @@ describe Puppet::Type.type(:gluster_peer), :unit => true do
             described_class.new(args)[:local_peer_aliases]
           end
 
-          it "should include default values" do
+          it 'should include default values' do
             expect(
               lpa_of_new(:peer => 'foo')
             ).to contain_exactly(*default_aliases)
           end
 
-          it "should accept a single string" do
+          it 'should accept a single string' do
             expect(
               lpa_of_new(:peer => 'foo', :local_peer_aliases => 'foo')
             ).to contain_exactly('foo', *default_aliases)
           end
 
-          it "should accept an array containing a single string" do
+          it 'should accept an array containing a single string' do
             expect(
               lpa_of_new(:peer => 'foo', :local_peer_aliases => ['foo'])
             ).to contain_exactly('foo', *default_aliases)
           end
 
-          it "should accept an array containing many strings" do
+          it 'should accept an array containing many strings' do
             expect(
               lpa_of_new(:peer => 'foo', :local_peer_aliases => ['a', 'b'])
             ).to contain_exactly('a', 'b', *default_aliases)
@@ -92,7 +92,7 @@ describe Puppet::Type.type(:gluster_peer), :unit => true do
             end
           end
 
-          it "should not accept other values" do
+          it 'should not accept other values' do
             expect { described_class.new(
               :peer => 'peer.example.com',
               :ensure => 'unhappy',
@@ -131,23 +131,28 @@ describe Puppet::Type.type(:gluster_peer), :unit => true do
 
         describe 'autorequire' do
           before :each do
-            @rtype = described_class.new(
-              :peer => 'peer.example.com',
-              :ensure => :present)
             @cat = Puppet::Resource::Catalog.new
+          end
+
+          def autoreq_peer
+            described_class.new(
+              :peer => 'peer.example.com',
+              :ensure => :present,
+            ).autorequire(@cat).map { |r| r.source.to_s }
           end
 
           it 'should require Service[glusterfs-server] if declared' do
             @cat.create_resource(:service, :title => 'glusterfs-server')
-            expect(
-              @rtype.autorequire(@cat).map { |r| r.source.to_s }
-            ).to eq(["Service[glusterfs-server]"])
+            expect(autoreq_peer).to eq(['Service[glusterfs-server]'])
           end
 
-          it 'should not require Service[glusterfs-server] unless declared' do
-            expect(
-              @rtype.autorequire(@cat).map { |r| r.source.to_s }
-            ).to eq([])
+          it 'should require Package[glusterfs-server] if declared' do
+            @cat.create_resource(:package, :title => 'glusterfs-server')
+            expect(autoreq_peer).to eq(['Package[glusterfs-server]'])
+          end
+
+          it 'should not require package or service unless declared' do
+            expect(autoreq_peer).to eq([])
           end
         end
       end

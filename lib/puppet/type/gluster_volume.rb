@@ -93,10 +93,8 @@ Puppet::Type.newtype(:gluster_volume) do
     end
   end
 
-  autorequire(:service) do
-    "glusterfs-server"
-  end
-
+  autorequire(:service) { 'glusterfs-server' }
+  autorequire(:package) { 'glusterfs-server' }
   autorequire(:gluster_peer) do
     value(:bricks).map { |brick| brick.split(":")[0] }.uniq
   end
