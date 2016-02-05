@@ -105,5 +105,9 @@ Puppet::Type.newtype(:gluster_volume) do
   autorequire(:service) { 'glusterfs-server' }
   autorequire(:package) { 'glusterfs-server' }
   autorequire(:gluster_peer) { split_bricks.map(&:first).uniq }
-  autorequire(:file) { local_bricks.map { |peer, dir| dir }.uniq }
+  autorequire(:file) do
+    # The last segment of the path is created by gluster, so we require the
+    # directory one level up from that.
+    local_bricks.map { |peer, dir| File.dirname(dir) }.uniq
+  end
 end

@@ -196,8 +196,8 @@ describe Puppet::Type.type(:gluster_volume), :unit => true do
           it 'should require any local brick dirs that are declared' do
             @cat.create_resource(:file, :title => '/b1', :ensure => 'directory')
             @cat.create_resource(:file, :title => '/b2', :ensure => 'directory')
-            expect(
-              autoreq_vol("#{Facter.value(:fqdn)}:/b1", 'p2:/b2', 'p3:/b3')
+            expect(autoreq_vol(
+                "#{Facter.value(:fqdn)}:/b1/v1", 'p2:/b2/v1', 'p3:/b3/v1')
             ).to eq(['File[/b1]'])
           end
         end
