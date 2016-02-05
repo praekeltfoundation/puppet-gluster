@@ -114,25 +114,25 @@ describe Puppet::Type.type(:gluster_volume), :unit => true do
             described_class.new(args)[:local_peer_aliases]
           end
 
-          it "should include default values" do
+          it 'should include default values' do
             expect(
               lpa_of_new(:name => 'foo')
             ).to contain_exactly(*default_aliases)
           end
 
-          it "should accept a single string" do
+          it 'should accept a single string' do
             expect(
               lpa_of_new(:name => 'foo', :local_peer_aliases => 'foo')
             ).to contain_exactly('foo', *default_aliases)
           end
 
-          it "should accept an array containing a single string" do
+          it 'should accept an array containing a single string' do
             expect(
               lpa_of_new(:name => 'foo', :local_peer_aliases => ['foo'])
             ).to contain_exactly('foo', *default_aliases)
           end
 
-          it "should accept an array containing many strings" do
+          it 'should accept an array containing many strings' do
             expect(
               lpa_of_new(:name => 'foo', :local_peer_aliases => ['a', 'b'])
             ).to contain_exactly('a', 'b', *default_aliases)
@@ -159,43 +159,38 @@ describe Puppet::Type.type(:gluster_volume), :unit => true do
 
         describe 'autorequire' do
           before :each do
-            def vol(*bricks)
-              described_class.new(
-                :name => 'foo',
-                :ensure => :present,
-                :bricks => bricks,
-              )
-            end
             @cat = Puppet::Resource::Catalog.new
+          end
+
+          def autoreq_vol(*bricks)
+            described_class.new(
+              :name => 'foo',
+              :ensure => :present,
+              :bricks => bricks,
+            ).autorequire(@cat).map { |r| r.source.to_s }
           end
 
           it 'should require Service[glusterfs-server] if declared' do
             @cat.create_resource(:service, :title => 'glusterfs-server')
-            expect(
-              vol().autorequire(@cat).map { |r| r.source.to_s }
-            ).to eq(['Service[glusterfs-server]'])
+            expect(autoreq_vol).to eq(['Service[glusterfs-server]'])
           end
 
           it 'should require Package[glusterfs-server] if declared' do
             @cat.create_resource(:package, :title => 'glusterfs-server')
-            expect(
-              vol().autorequire(@cat).map { |r| r.source.to_s }
-            ).to eq(['Package[glusterfs-server]'])
+            expect(autoreq_vol).to eq(['Package[glusterfs-server]'])
           end
 
           it 'should not require package or service unless declared' do
-            expect(
-              vol().autorequire(@cat).map { |r| r.source.to_s }
-            ).to eq([])
+            expect(autoreq_vol).to eq([])
           end
 
           it 'should require any brick peers that are declared' do
             @cat.create_resource(:gluster_peer, :title => 'p1')
             @cat.create_resource(:gluster_peer, :title => 'p2')
             @cat.create_resource(:gluster_peer, :title => 'p4')
-            expect(vol('p1:/b', 'p2:/b', 'p3:/b').autorequire(@cat).map { |r|
-                r.source.to_s
-              }).to eq(['Gluster_peer[p1]', 'Gluster_peer[p2]'])
+            expect(
+              autoreq_vol('p1:/b', 'p2:/b', 'p3:/b')
+            ).to contain_exactly('Gluster_peer[p1]', 'Gluster_peer[p2]')
           end
         end
 
