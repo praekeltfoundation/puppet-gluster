@@ -93,17 +93,17 @@ Puppet::Type.newtype(:gluster_volume) do
     end
   end
 
+  def split_bricks
+    value(:bricks).map { |brick| brick.split(':') }
+  end
+
+  def local_bricks
+    local_peers = value(:local_peer_aliases)
+    split_bricks.select { |peer, _| local_peers.include?(peer) }
+  end
+
   autorequire(:service) { 'glusterfs-server' }
   autorequire(:package) { 'glusterfs-server' }
-  autorequire(:gluster_peer) do
-    value(:bricks).map { |brick| brick.split(":")[0] }.uniq
-  end
-  autorequire(:file) do
-    files = []
-    value(:bricks).each do |brick|
-      peer, dir = brick.split(":")
-      files << dir if value(:local_peer_aliases).include? peer
-    end
-    files.uniq
-  end
+  autorequire(:gluster_peer) { split_bricks.map(&:first).uniq }
+  autorequire(:file) { local_bricks.map { |peer, dir| dir }.uniq }
 end
