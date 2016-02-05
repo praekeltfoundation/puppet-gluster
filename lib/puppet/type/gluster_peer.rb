@@ -44,7 +44,6 @@ Puppet::Type.newtype(:gluster_peer) do
     value(:local_peer_aliases).include? value(:peer)
   end
 
-  autorequire(:service) do
-    'glusterfs-server'
-  end
+  autorequire(:service) { 'glusterfs-server' }
+  autorequire(:package) { 'glusterfs-server' }
 end

@@ -144,7 +144,14 @@ describe Puppet::Type.type(:gluster_peer), :unit => true do
             ).to eq(["Service[glusterfs-server]"])
           end
 
-          it 'should not require Service[glusterfs-server] unless declared' do
+          it 'should require Package[glusterfs-server] if declared' do
+            @cat.create_resource(:package, :title => 'glusterfs-server')
+            expect(
+              @rtype.autorequire(@cat).map { |r| r.source.to_s }
+            ).to eq(["Package[glusterfs-server]"])
+          end
+
+          it 'should not require package or service unless declared' do
             expect(
               @rtype.autorequire(@cat).map { |r| r.source.to_s }
             ).to eq([])
