@@ -14,12 +14,14 @@ describe 'gluster' do
 
       describe 'when repo unmanaged' do
         let(:params) { {:repo_manage => false} }
-        it { should_not contain_apt__ppa('ppa:gluster/glusterfs-3.7') }
+        it { is_expected.not_to contain_apt__ppa('ppa:gluster/glusterfs-3.7') }
       end
 
       describe 'when given an invalid repo source' do
         let(:params) { {:repo_source => 'foo.rb'} }
-        it { should compile.and_raise_error(/'foo.rb' .* not supported/) }
+        it do
+          is_expected.to compile.and_raise_error(/'foo.rb' .* not supported/)
+        end
       end
     end
   end
