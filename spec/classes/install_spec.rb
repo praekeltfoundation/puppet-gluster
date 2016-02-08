@@ -9,10 +9,9 @@ describe 'gluster::install' do
 
       describe 'has sensible defaults' do
         it do
-          # FIXME: This assumes Debianland.
           is_expected.to contain_package('glusterfs-server').with(
             'ensure' => 'installed',
-          ).that_requires('Class[apt::update]')
+          )
         end
       end
 

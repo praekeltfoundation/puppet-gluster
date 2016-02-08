@@ -9,7 +9,6 @@ describe 'gluster::service' do
 
       describe 'has sensible defaults' do
         it do
-          # FIXME: This assumes Debianland.
           is_expected.to contain_service('glusterfs-server').with(
             'ensure' => 'running',
           )
