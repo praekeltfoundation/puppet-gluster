@@ -8,4 +8,11 @@ class gluster::params {
     'Debian' => 'gluster/glusterfs-3.7',
     default  => undef,
   }
+
+  $package_manage = true
+  $package_ensure = 'installed'
+  $package_name = $::osfamily ? {
+    'Debian' => 'glusterfs-server',
+    default  => undef,
+  }
 }
