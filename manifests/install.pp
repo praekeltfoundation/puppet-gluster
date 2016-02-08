@@ -22,9 +22,5 @@ class gluster::install(
     package { $package_name:
       ensure => $ensure,
     }
-    if $::osfamily == 'Debian' {
-      include apt
-      Class['apt::update'] -> Package[$package_name]
-    }
   }
 }

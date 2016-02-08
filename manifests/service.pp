@@ -22,9 +22,5 @@ class gluster::service(
     service { $service_name:
       ensure => $ensure,
     }
-    if $::osfamily == 'Debian' {
-      include apt
-      Class['apt::update'] -> Service[$service_name]
-    }
   }
 }
