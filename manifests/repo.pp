@@ -12,9 +12,9 @@
 #   * `gluster/glusterfs-3.7`
 #
 class gluster::repo(
-  $manage = true,
-  $source = 'gluster/glusterfs-3.7',
-) {
+  $manage = $gluster::params::repo_manage,
+  $source = $gluster::params::repo_source,
+) inherits gluster::params {
   if $manage {
     case $::osfamily {
       'Debian': {

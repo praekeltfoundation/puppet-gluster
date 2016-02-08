@@ -7,7 +7,7 @@ describe 'gluster::repo' do
         facts
       end
 
-      describe 'default to' do
+      describe 'has sensible defaults' do
         it { is_expected.to contain_apt__ppa('ppa:gluster/glusterfs-3.7') }
       end
 
