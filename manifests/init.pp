@@ -57,6 +57,10 @@ class gluster(
     service_name => $service_name,
   }
 
+  if $package_manage and $service_manage {
+    Package[$package_name] ~> Class['gluster::service']
+  }
+
   anchor { 'gluster::begin': }
   -> Class['gluster::repo']
   -> Class['gluster::install']

@@ -11,9 +11,22 @@ describe 'gluster' do
         # Manage the default repo.
         it { is_expected.to contain_apt__ppa('ppa:gluster/glusterfs-3.7') }
         # Manage the default package.
-        it {is_expected.to contain_package('glusterfs-server') }
-        # Managerthe default service.
-        it {is_expected.to contain_service('glusterfs-server') }
+        it { is_expected.to contain_package('glusterfs-server') }
+        # Manage the default service.
+        it { is_expected.to contain_service('glusterfs-server') }
+      end
+
+      describe 'has sensible ordering' do
+        it do
+          is_expected.to contain_class(
+            'gluster::repo').that_comes_before(
+            'Class[gluster::install]').that_comes_before(
+            'Class[gluster::service]')
+        end
+        it do
+          is_expected.to contain_package('glusterfs-server').that_notifies(
+            'Class[gluster::service]')
+        end
       end
 
       describe 'when the repo is unmanaged' do
