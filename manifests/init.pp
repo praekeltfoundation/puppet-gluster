@@ -38,6 +38,7 @@ class gluster(
 
   validate_bool($repo_manage)
   validate_bool($package_manage)
+  validate_bool($service_manage)
 
   # If $repo_manage is false, we still want to allow `gluster::repo` to be used
   # outside this class.
