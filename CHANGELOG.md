@@ -1,3 +1,10 @@
+## Unreleased
+
+### Features
+* `gluster::repo`, `gluster::install`, and `gluster::service` classes to manage
+  the installation and operation of gluster and a a top-level `gluster` class
+  to wrap them.
+
 ## 0.1.1 - 2016-02-05
 
 ### Fixes
