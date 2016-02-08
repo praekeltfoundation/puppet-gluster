@@ -8,20 +8,33 @@ describe 'gluster' do
       end
 
       describe 'has sensible defaults' do
-        # Add the default repo.
+        # Manage the default repo.
         it { is_expected.to contain_apt__ppa('ppa:gluster/glusterfs-3.7') }
-        # Install the default package.
+        # Manage the default package.
         it {is_expected.to contain_package('glusterfs-server') }
+        # Managerthe default service.
+        it {is_expected.to contain_service('glusterfs-server') }
       end
 
-      describe 'when repo unmanaged' do
+      describe 'when the repo is unmanaged' do
         let(:params) { {:repo_manage => false} }
         it { is_expected.not_to contain_apt__ppa('ppa:gluster/glusterfs-3.7') }
+        it { is_expected.to contain_package('glusterfs-server') }
+        it { is_expected.to contain_package('glusterfs-server') }
       end
 
-      describe 'when package unmanaged' do
+      describe 'when the package is unmanaged' do
         let(:params) { {:package_manage => false} }
+        it { is_expected.to contain_apt__ppa('ppa:gluster/glusterfs-3.7') }
         it { is_expected.not_to contain_package('glusterfs-server') }
+        it { is_expected.to contain_service('glusterfs-server') }
+      end
+
+      describe 'when the service is unmanaged' do
+        let(:params) { {:service_manage => false} }
+        it { is_expected.to contain_apt__ppa('ppa:gluster/glusterfs-3.7') }
+        it { is_expected.to contain_package('glusterfs-server') }
+        it { is_expected.not_to contain_service('glusterfs-server') }
       end
 
       describe 'when given an invalid repo source' do
@@ -44,6 +57,21 @@ describe 'gluster' do
         let(:params) { {:package_name => 'mygluster'} }
         it { is_expected.not_to contain_package('glusterfs-server') }
         it { is_expected.to contain_package('mygluster') }
+      end
+
+      describe 'when given a different service_ensure value' do
+        let(:params) { {:service_ensure => 'latest'} }
+        it do
+          is_expected.to contain_service('glusterfs-server').with(
+            'ensure' => 'latest',
+          )
+        end
+      end
+
+      describe 'when given a different service name' do
+        let(:params) { {:service_name => 'mygluster'} }
+        it { is_expected.not_to contain_service('glusterfs-server') }
+        it { is_expected.to contain_service('mygluster') }
       end
 
     end

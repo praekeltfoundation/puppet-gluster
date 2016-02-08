@@ -16,7 +16,7 @@ describe 'gluster::install' do
         end
       end
 
-      describe 'when package unmanaged' do
+      describe 'when the package is unmanaged' do
         let(:params) { {:manage => false} }
         it { is_expected.not_to contain_package('glusterfs-server') }
       end

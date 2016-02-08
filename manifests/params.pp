@@ -15,4 +15,11 @@ class gluster::params {
     'Debian' => 'glusterfs-server',
     default  => undef,
   }
+
+  $service_manage = true
+  $service_ensure = 'running'
+  $service_name = $::osfamily ? {
+    'Debian' => 'glusterfs-server',
+    default  => undef,
+  }
 }
