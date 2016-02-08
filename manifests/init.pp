@@ -40,33 +40,27 @@ class gluster(
   validate_bool($package_manage)
   validate_bool($service_manage)
 
-  # If $repo_manage is false, we still want to allow `gluster::repo` to be used
-  # outside this class.
-  if $repo_manage {
-    class { 'gluster::repo':
-      manage => $repo_manage,
-      source => $repo_source,
-    }
+  class { 'gluster::repo':
+    manage => $repo_manage,
+    source => $repo_source,
   }
 
-  # If $package_manage is false, we still want to allow `gluster::install` to
-  # be used outside this class.
-  if $package_manage {
-    class { 'gluster::install':
-      ensure       => $package_ensure,
-      manage       => $package_manage,
-      package_name => $package_name,
-    }
+  class { 'gluster::install':
+    ensure       => $package_ensure,
+    manage       => $package_manage,
+    package_name => $package_name,
   }
 
-  # If $service_manage is false, we still want to allow `gluster::service` to
-  # be used outside this class.
-  if $service_manage {
-    class { 'gluster::service':
-      ensure       => $service_ensure,
-      manage       => $service_manage,
-      service_name => $service_name,
-    }
+  class { 'gluster::service':
+    ensure       => $service_ensure,
+    manage       => $service_manage,
+    service_name => $service_name,
   }
+
+  anchor { 'gluster::begin': }
+  -> Class['gluster::repo']
+  -> Class['gluster::install']
+  -> Class['gluster::service']
+  -> anchor { 'gluster::end': }
 
 }
