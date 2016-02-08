@@ -4,22 +4,16 @@
 #
 class gluster::params {
   $repo_manage = true
-  $repo_source = $::osfamily ? {
-    'Debian' => 'gluster/glusterfs-3.7',
+  $repo_source = $::operatingsystem ? {
+    'Ubuntu' => 'gluster/glusterfs-3.7',
     default  => undef,
   }
 
   $package_manage = true
   $package_ensure = 'installed'
-  $package_name = $::osfamily ? {
-    'Debian' => 'glusterfs-server',
-    default  => undef,
-  }
+  $package_name = 'glusterfs-server'
 
   $service_manage = true
   $service_ensure = 'running'
-  $service_name = $::osfamily ? {
-    'Debian' => 'glusterfs-server',
-    default  => undef,
-  }
+  $service_name = 'glusterfs-server'
 }

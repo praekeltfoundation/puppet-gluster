@@ -16,23 +16,24 @@ class gluster::repo(
   $source = $gluster::params::repo_source,
 ) inherits gluster::params {
   if $manage {
-    case $::osfamily {
-      'Debian': {
+    case $::operatingsystem {
+      'Ubuntu': {
         include apt
+
         case $source {
           'gluster/glusterfs-3.7': {
             apt::ppa { 'ppa:gluster/glusterfs-3.7': }
           }
-
           default: {
             fail("APT repository '${source}' is not supported.")
           }
         }
         contain 'apt::update'
+
       }
 
       default: {
-        fail("No repository information for OSfamily '${::osfamily}'.")
+        fail("No repository information for OS '${::operatingsystem}'.")
       }
     }
   }

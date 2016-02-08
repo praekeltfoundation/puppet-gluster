@@ -24,7 +24,7 @@ describe 'gluster::repo' do
       end
 
       describe 'when run on an unsupported OS' do
-        let(:facts) { {:osfamily => 'iOS'} }
+        let(:facts) { facts.merge({:operatingsystem => 'iOS'}) }
         it { is_expected.to compile.and_raise_error(/No repository .* 'iOS'/) }
       end
     end
