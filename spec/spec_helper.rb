@@ -1,5 +1,7 @@
 require 'simplecov'
-SimpleCov.start
+SimpleCov.start do
+  add_filter '/spec/fixtures/'
+end
 
 require 'puppetlabs_spec_helper/module_spec_helper'
 
@@ -18,3 +20,4 @@ end
 require 'helpers/fake_facts'
 require 'helpers/fake_gluster'
 require 'helpers/log_matcher'
+require 'helpers/resource_order_matcher'
