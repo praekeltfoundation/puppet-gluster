@@ -14,15 +14,17 @@ describe 'gluster' do
         it { is_expected.to contain_package('glusterfs-server') }
         # Manage the default service.
         it { is_expected.to contain_service('glusterfs-server') }
-      end
-
-      describe 'has sensible ordering' do
+        # Have a sensible resource ordering.
         it do
-          is_expected.to contain_class(
-            'gluster::repo').that_comes_before(
-            'Class[gluster::install]').that_comes_before(
-            'Class[gluster::service]')
+          is_expected.to have_resource_order(
+            'Anchor[gluster::begin]',
+            'Class[gluster::repo]',
+            'Class[gluster::install]',
+            'Class[gluster::service]',
+            'Anchor[gluster::end]',
+          )
         end
+        # Notify the service if the package changes.
         it do
           is_expected.to contain_package('glusterfs-server').that_notifies(
             'Class[gluster::service]')

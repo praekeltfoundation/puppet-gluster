@@ -20,3 +20,4 @@ end
 require 'helpers/fake_facts'
 require 'helpers/fake_gluster'
 require 'helpers/log_matcher'
+require 'helpers/resource_order_matcher'
