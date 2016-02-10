@@ -1,4 +1,4 @@
-## Unreleased
+## 0.2.0 2016-02-10
 
 ### Features
 * `gluster::repo`, `gluster::install`, and `gluster::service` classes to manage
