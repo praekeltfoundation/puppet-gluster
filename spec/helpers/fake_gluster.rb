@@ -257,11 +257,17 @@ class FakeGluster
       raise ArgumentError, "missing '#{arg}'" unless args.include? arg
       args.delete(arg)
     end
-    return format_doc(make_cli_err(@error)) unless @error.nil?
 
     # All commands have the form <noun> <verb> <*args>, so we can use this to
     # avoid building a big dispatch table.
     cmd_method = "cmd_#{args[0]}_#{args[1]}".to_sym
+
+    # Ignore the error for `gluster peer status` because that makes prefetch
+    # explode in integration tests when using Puppet 4.x.
+    unless @error.nil? or cmd_method == :cmd_peer_status
+      return format_doc(make_cli_err(@error))
+    end
+
     send(cmd_method, *args.drop(2).map(&:to_s))
   end
 
