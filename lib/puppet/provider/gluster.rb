@@ -1,3 +1,6 @@
+require 'rexml/document'
+
+
 class GlusterCmdError < Puppet::ExecutionFailure
   attr_reader :opRet, :opErrno, :opErrstr
   def initialize(opRet, opErrno, opErrstr)

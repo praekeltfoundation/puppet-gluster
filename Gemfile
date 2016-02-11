@@ -4,7 +4,7 @@ group :test do
   gem 'rake'
   gem 'simplecov'
 
-  puppetversion = ENV.key?('PUPPET_VERSION') ? "#{ENV['PUPPET_VERSION']}" : ['>= 3.0.0','< 4.0']
+  puppetversion = ENV.key?('PUPPET_VERSION') ? "#{ENV['PUPPET_VERSION']}" : ['>= 3.4.0']
   gem 'puppet', puppetversion
 
   gem 'librarian-puppet'
