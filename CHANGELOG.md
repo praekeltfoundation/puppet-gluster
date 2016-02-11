@@ -1,7 +1,7 @@
 ## 0.2.1 UNRELEASED
 
 ### Features
-* Support for puppet 4.x.
+* Support for Puppet 4.x.
 
 ### Fixes
 * Missing require added so the providers now work deliberately instead of
