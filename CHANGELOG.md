@@ -1,3 +1,14 @@
+## 0.2.1 UNRELEASED
+
+### Features
+* Support for puppet 4.x.
+
+### Fixes
+* Missing require added so the providers now work deliberately instead of
+  accidentally.
+* Test helper now excludes `gluster peer status` from configured errors to
+  avoid breaking prefetch in integration tests.
+
 ## 0.2.0 2016-02-10
 
 ### Features
