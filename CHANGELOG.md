@@ -1,4 +1,4 @@
-## 0.2.1 UNRELEASED
+## 0.2.1 2016-02-11
 
 ### Features
 * Support for Puppet 4.x.
