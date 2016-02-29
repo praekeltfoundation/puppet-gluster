@@ -25,7 +25,8 @@ Rake::Task[:coverage].clear
 
 # Remove puppetlabs_spec_helper's metadata and validate tasks
 Rake::Task[:validate].clear
-Rake::Task[:metadata].clear
+# This was removed in puppetlabs_spec_helper 1.1.0
+Rake::Task[:metadata].clear if Rake::Task.task_defined?(:metadata)
 
 desc "Run syntax, lint, metadata and spec tests."
 task :test => [
