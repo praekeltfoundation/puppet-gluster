@@ -18,6 +18,23 @@ hammering on it a bit first.
 
 ## Usage
 
+The `gluster` class manages the installation and running of the
+`glusterfs-server` service. Repo and package management is only implemented for
+Ubuntu, however.
+
+```puppet
+class { 'gluster':
+  package_ensure => 'latest',
+  service_ensure => 'running',
+}
+```
+
+For a full list of options see the [manifest source](manifests/init.pp).
+
+In most cases the defaults should be suitable and a simple `include gluster`
+will suffice.
+
+
 ### `gluster_peer`
 
 The `gluster_peer` resource sets up peer relationships between the nodes by
