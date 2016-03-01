@@ -12,8 +12,8 @@ This is particularly useful when provisioning VMs with vagrant.
 
 This is pretty much just a prototype at the moment. Its functionality is quite
 limited and it hasn't been tested on a wide variety of environments. It meets
-our fairly needs, but we wouldn't recommend using it in production without
-hammering on it a bit first.
+our fairly basic needs, but we wouldn't recommend using it in production
+without hammering on it a bit first.
 
 
 ## Usage
