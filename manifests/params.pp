@@ -13,6 +13,8 @@ class gluster::params {
   $package_ensure = 'installed'
   $package_name = 'glusterfs-server'
 
+  $client_package_name = 'glusterfs-client'
+
   $service_manage = true
   $service_ensure = 'running'
   $service_name = 'glusterfs-server'
