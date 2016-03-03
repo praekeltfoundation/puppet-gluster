@@ -35,6 +35,17 @@ In most cases the defaults should be suitable and a simple `include gluster`
 will suffice.
 
 
+### `gluster::client`
+
+Hosts that only need a client can use `gluster::client`.
+
+```puppet
+class { 'gluster::client':
+  ensure => 'latest',
+}
+```
+
+
 ### `gluster_peer`
 
 The `gluster_peer` resource sets up peer relationships between the nodes by
