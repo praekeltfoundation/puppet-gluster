@@ -1,6 +1,7 @@
-## 0.2.2-dev UNRELEASED
+## 0.2.2 2016-03-04
 
 ### Features
+* Documentation!
 * `gluster::client` added.
 
 ## 0.2.1 2016-02-11
